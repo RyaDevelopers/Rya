@@ -74,7 +74,10 @@ var NRS = (function (NRS, $, undefined) {
                 ["minBalanceNXT", "minBalance"],
                 ["shufflingAmountNXT", "amount"],
                 ["monitorAmountNXT", "amount"],
-                ["monitorThresholdNXT", "threshold"]
+                ["monitorThresholdNXT", "threshold"],
+                ["loanAmount", "loanAmountNQT"],
+                ["loanInterestRate", "loanInterestRateNQT"],
+                ["payBackLoanAmount", "payBackLoanAmountNQT"]
             ];
 
             for (i = 0; i < nxtFields.length; i++) {

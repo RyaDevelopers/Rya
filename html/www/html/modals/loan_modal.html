@@ -1,0 +1,66 @@
+<div class="modal fade" id="send_loan_modal" data-transaction-type="0" data-transaction-subtype="0" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-700">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" data-i18n="loan_nxt">Loan NXT</h4>
+            </div>
+            <div class="modal-body">
+                <form role="form" autocomplete="off">
+                    <div class="callout callout-danger error_message" style="display:none"></div>
+                    <div data-replace-with-modal-template="recipient_modal_template"></div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-6 col-md-6">
+                            <div class="form-group">
+                                <label for="loan_money_amount" data-i18n="amount">AMOUNT</label>
+                                <div class="input-group">
+                                    <input type="text" name="loanAmount" id="loan_money_amount" step="any" min="0" class="form-control" placeholder="Amount" data-i18n="[placeholder]amount" tabindex="3">
+                                    <span class="input-group-addon" data-i18n="ryoCapitals">RYO</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-6 col-md-6">
+                            <div class="form-group">
+                                <label for="loan_duration" data-i18n="loan_duration">DURATION</label>
+                                <div class="input-group">
+                                    <input type="number" name="loanDuration" id="loan_duration" step="any" min="0" class="form-control" placeholder="Duration" data-i18n="[placeholder]loan_duration" tabindex="3">
+                                    <span class="input-group-addon" data-i18n="blocksCapital">BLOCKS</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <p class="help-block" id="loan_duration_help"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Ori TODO: Add advanced features? -->
+                    <div data-replace-with-modal-template="fee_calculation_modal_template"></div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-6 col-md-6">
+                            <div class="form-group">
+                                <label for="intrest_rate" data-i18n="intrest_rate">INTREST RATE</label>
+                                <div class="input-group">
+                                    <input type="number" name="loanInterestRate" id="intrest_rate" step="any" min="0" class="form-control" placeholder="intrest_rate" data-i18n="[placeholder]intrest_rate" tabindex="3">
+                                    <span class="input-group-addon">RYO</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TODO: Add advanced features? -->
+                    <div data-replace-with-modal-template="advanced_deadline_template"></div>
+                    <div data-replace-with-modal-template="secret_phrase_modal_template"></div>
+                    <div class="callout account_info" style="display:none;margin-bottom: 0;"></div>
+                    <input type="hidden" name="request_type" value="loanMoney" data-default="loanMoney" />
+                    <input type="hidden" name="converted_account_id" value="" />
+                    <input type="hidden" name="merchant_info" value="" data-default="" />
+                </form>
+            </div>
+            <div class="modal-footer" style="margin-top:0;">
+                <button type="button" class="btn btn-default" data-dismiss="modal" data-i18n="cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" data-loading-text="Submitting..." data-i18n="loan_nxt;[data-loading-text]submitting">Send NXT</button>
+            </div>
+        </div>
+    </div>
+</div>

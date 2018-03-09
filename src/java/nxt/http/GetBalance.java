@@ -34,13 +34,14 @@ public final class GetBalance extends APIServlet.APIRequestHandler {
     @Override
     protected JSONStreamAware processRequest(HttpServletRequest req) throws NxtException {
         boolean includeEffectiveBalance = "true".equalsIgnoreCase(req.getParameter("includeEffectiveBalance"));
+        boolean includeEffectiveTrustBalance = "true".equalsIgnoreCase(req.getParameter("includeEffectiveTrustBalance"));
         long accountId = ParameterParser.getAccountId(req, true);
         int height = ParameterParser.getHeight(req);
         if (height < 0) {
             height = Nxt.getBlockchain().getHeight();
         }
         Account account = Account.getAccount(accountId, height);
-        return JSONData.accountBalance(account, includeEffectiveBalance, height);
+        return JSONData.accountBalance(account, includeEffectiveBalance, height, includeEffectiveTrustBalance);
     }
 
 }

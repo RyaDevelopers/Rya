@@ -87,7 +87,7 @@ public final class GetNextBlockGeneratorsTemp extends APIServlet.APIRequestHandl
                 }
                 JSONObject resp = new JSONObject();
                 JSONData.putAccount(resp, "account", generator.getAccountId());
-                resp.put("effectiveBalanceNXT", generator.getEffectiveBalance());
+                resp.put("effectiveTrust", generator.getEffectiveTrust());
                 resp.put("hitTime", generator.getHitTime());
                 resp.put("deadline", (int)generator.getHitTime() - lastBlock.getTimestamp());
                 generators.add(resp);

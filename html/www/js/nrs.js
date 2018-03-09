@@ -187,7 +187,7 @@ var NRS = (function(NRS, $, undefined) {
 
                 $("[data-i18n]").i18n();
                 NRS.initClipboard();
-                hljs.initHighlightingOnLoad();
+                //hljs.initHighlightingOnLoad(); //TODO Re-enable this?? it is commented because it threw exception
             });
     };
 
@@ -286,9 +286,10 @@ var NRS = (function(NRS, $, undefined) {
 						customLoginWarningDiv.hide();
 					}
 
-					if (NRS.isInitializePlugins()) {
-						NRS.initializePlugins();
-					}
+					// Hushi: For now we removed plugings
+					// if (NRS.isInitializePlugins()) {
+					// 	NRS.initializePlugins();
+					// }
 					NRS.printEnvInfo();
 					NRS.spinner.stop();
 					console.log("getState response processed");
@@ -1112,13 +1113,14 @@ var NRS = (function(NRS, $, undefined) {
 			"includeAssets": true,
 			"includeCurrencies": true,
 			"includeLessors": true,
-			"includeEffectiveBalance": true
+			"includeEffectiveBalance": true,
+			"includeEffectiveTrustBalance": true
 		}, function(response) {
 			var previousAccountInfo = NRS.accountInfo;
 			NRS.accountInfo = response;
 			if (response.errorCode) {
 				NRS.logConsole("Get account info error (" + response.errorCode + ") " + response.errorDescription);
-				$("#account_balance, #account_balance_sidebar, #account_currencies_balance, #account_nr_currencies, #account_purchase_count, #account_pending_sale_count, #account_completed_sale_count, #account_message_count, #account_alias_count").html("0");
+				$("#account_balance, #account_balance_sidebar, ##account_trust_balance_sidebar, #account_currencies_balance, #account_nr_currencies, #account_purchase_count, #account_pending_sale_count, #account_completed_sale_count, #account_message_count, #account_alias_count").html("0");
                 NRS.updateDashboardMessage();
 			} else {
 				if (NRS.accountRS && NRS.accountInfo.accountRS != NRS.accountRS) {
@@ -1128,7 +1130,8 @@ var NRS = (function(NRS, $, undefined) {
 					NRS.accountRS = NRS.accountInfo.accountRS;
 				}
                 NRS.updateDashboardMessage();
-                $("#account_balance, #account_balance_sidebar").html(NRS.formatStyledAmount(response.unconfirmedBalanceNQT));
+				$("#account_balance, #account_balance_sidebar").html(NRS.formatStyledAmount(response.unconfirmedBalanceNQT));
+				$("#account_trust_balance_sidebar").html(NRS.formatStyledAmount(response.effectiveTrustBalance));
                 $("#account_forged_balance").html(NRS.formatStyledAmount(response.forgedBalanceNQT));
 
                 if (NRS.isDisplayOptionalDashboardTiles()) {

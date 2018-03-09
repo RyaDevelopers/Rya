@@ -341,8 +341,27 @@ var NRS = (function(NRS, $, undefined) {
                     'iconHTML': '<i class="fa fa-thumbs-down"></i>'
                 }
             }
+        },
+        8: {
+            'title': "Loan",
+            'i18nKeyTitle': 'loanTitle',
+            'iconHTML': "<i class='fa fa-balance-scale'></i>",
+            'subTypes': {
+                0: {
+                    'title': "Return loan",
+                    'i18nKeyTitle': 'returnLoan',
+                    'iconHTML': "<i class='fa fa-money'></i>",
+                    'receiverPage': 'transactions'
+                },
+                1: {
+                    'title': "Give loan",
+                    'i18nKeyTitle': 'giveLoan',
+                    'iconHTML': "<i class='fa fa-money'></i>",
+                    'receiverPage': 'transactions'
+                }
+            }
         }
-    };
+    }
 
     NRS.subtype = {};
 

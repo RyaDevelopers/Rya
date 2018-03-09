@@ -236,6 +236,33 @@ public final class ParameterParser {
         }
         return alias;
     }
+    
+    public static long getLoanAmountNQT(HttpServletRequest req) throws ParameterException {
+        return getLong(req, "loanAmountNQT", 1L, Constants.MAX_BALANCE_NQT, true);
+    }
+
+
+    public static int getDurationInBlocks(HttpServletRequest req) throws ParameterException {
+        return getInt(req, "loanDuration", 1, Constants.MAX_LOAN_DURATION, true);
+    }
+
+    public static long getInterestFeeNQT(HttpServletRequest req) throws ParameterException {
+        return getLong(req, "loanInterestRateNQT", 1L, Constants.MAX_BALANCE_NQT, true);
+    }
+
+    public static long getPayBackLoanAmount(HttpServletRequest req) throws ParameterException {
+        return getLong(req, "payBackLoanAmountNQT", 1L, Constants.MAX_BALANCE_NQT, true);
+    }
+
+    public static long getLoanId(HttpServletRequest req) throws ParameterException {
+        long loanId;
+        try {
+            loanId = Convert.parseUnsignedLong(Convert.emptyToNull(req.getParameter("loan_id")));
+        } catch (RuntimeException e) {
+            throw new ParameterException(INCORRECT_ALIAS);
+        }
+        return loanId;
+    }
 
     public static long getAmountNQT(HttpServletRequest req) throws ParameterException {
         return getLong(req, "amountNQT", 1L, Constants.MAX_BALANCE_NQT, true);

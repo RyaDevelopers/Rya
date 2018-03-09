@@ -19,7 +19,7 @@
  */
 var NRS = (function(NRS, $) {
 	NRS.automaticallyCheckRecipient = function() {
-        var $recipientFields = $("#send_money_recipient, #transfer_asset_recipient, #transfer_currency_recipient, " +
+        var $recipientFields = $("#send_loan_recipient, #send_money_recipient, #transfer_asset_recipient, #transfer_currency_recipient, " +
         "#send_message_recipient, #add_contact_account_id, #update_contact_account_id, #lease_balance_recipient, " +
         "#transfer_alias_recipient, #sell_alias_recipient, #set_account_property_recipient, #delete_account_property_recipient, " +
 		"#add_monitored_account_recipient");
@@ -48,7 +48,7 @@ var NRS = (function(NRS, $) {
 		});
 	};
 
-	$("#send_message_modal, #send_money_modal, #transfer_currency_modal, #add_contact_modal, #set_account_property_modal, #delete_account_property_modal").on("show.bs.modal", function(e) {
+	$("#send_message_modal, #send_money_modal, #transfer_currency_modal, #add_contact_modal, #set_account_property_modal, #delete_account_property_modal", "#send_loan_modal").on("show.bs.modal", function(e) {
 		var $invoker = $(e.relatedTarget);
 		var account = $invoker.data("account");
 		if (!account) {

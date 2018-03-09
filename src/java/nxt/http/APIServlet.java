@@ -134,6 +134,9 @@ public final class APIServlet extends HttpServlet {
             if (!api.getName().isEmpty() && api.getHandler() != null) {
                 map.put(api.getName(), api.getHandler());
             }
+            else {
+            	Logger.logInfoMessage("can't map " + api.getName());
+            }
         }
 
         AddOns.registerAPIRequestHandlers(map);

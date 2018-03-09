@@ -89,11 +89,11 @@ public final class JSONData {
         return json;
     }
 
-    static JSONObject accountBalance(Account account, boolean includeEffectiveBalance) {
-        return accountBalance(account, includeEffectiveBalance, Nxt.getBlockchain().getHeight());
+    static JSONObject accountBalance(Account account, boolean includeEffectiveBalance, boolean includeEffectiveTrustBalance) {
+        return accountBalance(account, includeEffectiveBalance, Nxt.getBlockchain().getHeight(), includeEffectiveTrustBalance);
     }
 
-    static JSONObject accountBalance(Account account, boolean includeEffectiveBalance, int height) {
+    static JSONObject accountBalance(Account account, boolean includeEffectiveBalance, int height, boolean includeTrustBalance) {
         JSONObject json = new JSONObject();
         if (account == null) {
             json.put("balanceNQT", "0");
@@ -103,6 +103,9 @@ public final class JSONData {
                 json.put("effectiveBalanceNXT", "0");
                 json.put("guaranteedBalanceNQT", "0");
             }
+            if (includeTrustBalance) {
+            	json.put("effectiveTrustBalance", "0");
+            }
         } else {
             json.put("balanceNQT", String.valueOf(account.getBalanceNQT()));
             json.put("unconfirmedBalanceNQT", String.valueOf(account.getUnconfirmedBalanceNQT()));
@@ -110,6 +113,9 @@ public final class JSONData {
             if (includeEffectiveBalance) {
                 json.put("effectiveBalanceNXT", account.getEffectiveBalanceNXT(height));
                 json.put("guaranteedBalanceNQT", String.valueOf(account.getGuaranteedBalanceNQT(Constants.GUARANTEED_BALANCE_CONFIRMATIONS, height)));
+            }
+            if (includeTrustBalance) {
+            	json.put("effectiveTrustBalance", account.getEffectiveTrust());
             }
         }
         return json;
