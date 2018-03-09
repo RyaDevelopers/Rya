@@ -5,10 +5,10 @@ then
 	echo VERSION not defined
 	exit 1
 fi
-APPLICATION="nxt-clone"
+APPLICATION="ryo"
 PACKAGE=${APPLICATION}-client-${VERSION}
 echo PACKAGE="${PACKAGE}"
-CHANGELOG=nxt-clone-client-${VERSION}.changelog.txt
+CHANGELOG=ryo-client-${VERSION}.changelog.txt
 OBFUSCATE=$2
 
 FILES="changelogs conf html lib resource contrib logs"

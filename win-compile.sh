@@ -1,7 +1,7 @@
 #!/bin/sh
 CP="lib/*;classes"
 SP=src/java/
-APPLICATION="nxt-clone"
+APPLICATION="ryo"
 
 /bin/rm -f ${APPLICATION}.jar
 /bin/rm -f ${APPLICATION}service.jar
