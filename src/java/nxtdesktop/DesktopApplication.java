@@ -126,7 +126,7 @@ public class DesktopApplication extends Application {
                     String language = locale.getLanguage().toLowerCase() + "-" + locale.getCountry().toUpperCase();
                     window.setMember("javaFxLanguage", language);
                     webEngine.executeScript("console.log = function(msg) { java.log(msg); };");
-                    stage.setTitle(Constants.PROJECT_NAME + " Desktop - " + webEngine.getLocation());
+                    stage.setTitle("RYO Desktop - " + webEngine.getLocation());
                     nrs = (JSObject) webEngine.executeScript("NRS");
                     updateClientState("Desktop Wallet started");
                     BlockchainProcessor blockchainProcessor = Nxt.getBlockchainProcessor();
@@ -169,7 +169,7 @@ public class DesktopApplication extends Application {
 
         Scene scene = new Scene(browser);
         String address = API.getServerRootUri().toString();
-        stage.getIcons().add(new Image(address + "/img/nxt-icon-32x32.png"));
+        stage.getIcons().add(new Image(address + "/img/trust-icon-32x32.png"));
         stage.initStyle(StageStyle.DECORATED);
         stage.setScene(scene);
         stage.sizeToScene();
