@@ -1,110 +1,98 @@
+# Welcome to Ryo #
+
+RYO is a proof-of-trust cryptocurrency designed as a stable monetary system in which the money market has a normal demand and supply curve and is constructed in open- source Java. Following other peer-to-peer electronic cash systems, RYO is a crypto- currency designed to be a medium of exchange that is a store of value and to embody trust. 
+
+Unlike earlier cryptocurrencies, RYO does not use a proof-of-work model (i.e: bitcoin), a proof-of stake model (i.e: Nxt), or a proof-of-importance model (i.e: NEM). 
+
+The model of RYO is powered by the observation that money is a kind of a social contract that is based on mutual trust. Without trust, people will refuse to be paid because they question their ability to use money to buy products and services in the future. While Blockchain provides a payment system based on cryptographic proof instead of a trusted third party such as a central bank, no cryptocurrency has succeeded so far in demonstrating the trust on which the traditional system rests. 
+
+The proof-of-trust model, first introduced by RYO, is expected to be a fuller and more complete substitute for the Fiat currency and monetary system than any crypto-currency yet.
+
+With Ryo you can 
+
+- Loan and Barrow money
+- View accounts calculated credit score 
+- Calculate local and global interest rates 
+   
 ----
-# Nxt Blockchain Creation Kit #
+## Get it! ##
 
-This package is intended to allow easy creation of new blockchain projects
-based on Nxt, satisfying the requirements of the Jelurida Public License
-version 1.0 for the Nxt Public Blockchain Platform.
+  - *pre-packaged* - `coming soon`
 
-This is a starter kit for developers, not for end users. If you just install
-it and run it, you will get a blockchain with no tokens, no accounts, and no
-peers configured. To actually start a new blockchain using this kit, at least
-the genesis block parameters and accounts must be defined in
-conf/data/genesisParameters.json and conf/data/genesisAccounts.json.
+  - *dependencies*:
+    - *general* - Java 8
+    - *Ubuntu* - `http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html`
+    - *Debian* - `http://www.webupd8.org/2014/03/how-to-install-oracle-java-8-in-debian.html`
+    - *FreeBSD* - `pkg install openjdk8`
 
-Edit the genesisParameters.json file to define the timestamp of the genesis
-block for your new blockchain (epochBeginning), and the public key of the
-genesis account (genesisPublicKey).
-
-The genesisAccounts.json file, and genesisAccounts-testnet.json for testnet,
-should contain the list of accounts to be created in the genesis block of the
-new blockchain, and their corresponding balances and public keys. The supplied
-genesisAccounts.json file is empty. To generate such a file containing both
-new user accounts, and the accounts of NXT holders from the Nxt public
-blockchain, you must use the JPLSnapshot utility from the Nxt Reference
-Software (NRS) v1.11.8 or later.
-
+  - *repository* - `git clone `
+  
 ----
-### Using the JPLSnapshot NRS add-on ###
+## Run it! ##
 
-Download and install the latest Nxt package from the Jelurida repository:
+  - click on the Nxt icon, or start from the command line:
+  - Unix: `./start.sh`
+  - Mac: `./run.command`
+  - Window: `run.bat`
 
-https://bitbucket.org/Jelurida/nxt/downloads
-
-Enable the JPLSnapshot add-on in conf/nxt.properties by setting:
-
-nxt.addOns=nxt.addons.JPLSnapshot
-
-Make sure your node is configured as full node (not light client), and let it
-download the full blockchain.
-
-The add-on downloadJPLSnapshot API should be available under:
-
-http://localhost:7876/test?requestTag=ADDONS
-
-
-Below is the documentation for how to use this API:
+  - wait for the JavaFX wallet window to open
+  - on platforms without JavaFX, open http://localhost:7876/ in a browser
 
 ----
-The downloadJPLSnapshot API can be used to generate a genesis block JSON for a
-clone to satisfy the JPL 10% sharedrop requirement to existing NXT holders.
+## Compile it! ##
 
-This utility takes a snapshot of account balances and public keys on the Nxt
-blockchain as of the specified height, scales down the balance of each account
-proportionately so that the total of balances of sharedrop accounts is equal to
-10% of the total of all balances, and merges this data with the supplied new
-genesis accounts and balances.
-
-Note that using a height more than 800 blocks in the past will normally require
-a blockchain rescan, which takes a few hours to complete. Do not interrupt this
-process.
-
-Request parameters
-
-    newGenesisAccounts - a JSON formatted file containing all new account
-    public keys and balances to be included in the clone genesis block
-    
-    height - the Nxt blockchain height at which to take the snapshot
-
-Response
-
-    A JSON formatted file, genesisAccounts.json, containing all public keys,
-    new accounts and sharedrop accounts, and their initial balances, which
-    should be placed in the conf/data directory of the clone blockchain.
-
-
-Input file format
-
-The input file should contain a map of account numbers to coin balances, and a
-list of account public keys. Account numbers can be specified in either numeric
-or RS format. Supplying the public key for each account is optional, but
-recommended. Here is an example input file, which allocates 300M each to the
-accounts with passwords "0", "1" and "2", for a total of 900M to new accounts,
-resulting in 100M automatically allocated to existing NXT holders:
-
-```
-{
-    "balances": {
-         "NXT-NZKH-MZRE-2CTT-98NPZ": 30000000000000000,
-         "NXT-X5JH-TJKJ-DVGC-5T2V8": 30000000000000000,
-         "NXT-LTR8-GMHB-YG56-4NWSE": 30000000000000000
-     },
-     "publicKeys": [
-         "bf0ced0472d8ba3df9e21808e98e61b34404aad737e2bae1778cebc698b40f37",
-         "39dc2e813bb45ff063a376e316b10cd0addd7306555ca0dd2890194d37960152",
-         "011889a0988ccbed7f488878c62c020587de23ebbbae9ba56dd67fd9f432f808"
-     ]
- }
-```
+  - if necessary with: `./compile.sh`
+  - you need jdk-8 as well
 
 ----
+## Improve it! ##
 
-The generated genesisAccounts.json file should be placed in the conf/data
-directory for the new blockchain package, replacing the existing empty file.
+  - we also love **pull requests**
+  - we also love issues (resolved ones actually ;-) )
+  - in any case, make sure you leave **your ideas** at BitBucket
+  - assist others on the issue tracker
+  - **review** existing code and pull requests
+  - cf. coding guidelines in DEVELOPERS-GUIDE.md
 
-There are multiple other customizations that should be made for the newly
-created Nxt clone, such as changing the default peer ports in
-nxt/peer/Peer.java, defining default peers in nxt-default.properties, changing
-the coin name and software name in nxt/Nxt.java, customizing the UI, etc.
-Such customization work should be done by a competent developer, and is beyond
-the scope of this document.
+...
+on the forums:
 
+...
+
+----
+## Testnet ##
+
+The Testnet is a copy of our system where you can try out every functionality.
+Our Test is installed here machine located in https://console.cloud.google.com/compute/instances?project=gta2-186320
+Today this is the external IP: 35.190.163.228 and you can SSH this machine. DO NOT RESTART THIS MACHINE!!! (IP address will be changed as a result of it)
+The only testnet peer you will have in your wallet from now on is the above testnet machine
+
+  - What should I do to use it?
+    - You must pull all the changes after 20.12.17
+  - Which ports are used by the testnet?
+    - 8877(SSL port), 8876 (non-SSL port / API server port), 8875(UI port), 8874(peer port
+  - How can I upgrade the testnet node with my new changes
+    - Prepare your new changes:
+        - Compile your changes
+        - Zip the whole directory you cloned after you compile it successfully.
+    - Connect the testnet vm:
+        - Go to https://console.cloud.google.com/compute/instances?project=gta2-186320
+        - Click on the connect "SSH" button
+    - Stop the current testnet running node
+        - Run: "ps -fC java" , it will print out the java process id (pid)
+        - Kill the java process but run: "kill -9 <java pid>"
+        - Rename the current "nxt" directoy so if something will go wrong you will still have a restore point to go back to.
+    - Start the new testnet node
+        - Transfer the zip file into the root directory of the linux cmd that was just opened
+        - Unzip the zip file into a new "nxt" directory
+        - Run: cd ~/nxt
+        - Run: nohup ./run.sh &
+        - Run: exit
+    - Validate your node is functioning well:
+        - Once you run the run.sh command you will be notify that a log file was opened in the name of nohup.out, make sure you have no exceptions there and it includes the line "Nxt server <version> started successfully."
+        - Notify the team you have upgraded the testnet node.
+  -  What shell I do if i had to restart the testnet VM:
+      - Change the deafultTestnetPeers value in <testnet VM root>\conf\nxt-default.properties to have the new external IP and restart the node (section 3 and then 4 with the same node).
+      - Commit the same change into our repository.
+      - Let everyone know you have done it and they must get your latest commit and rerun their node to use the testnet peer that have new IP now.
+----

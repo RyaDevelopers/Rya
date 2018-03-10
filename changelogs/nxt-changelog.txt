@@ -2811,7 +2811,7 @@ Allow the API server to handle both http and https requests on different ports,
 if nxt.apiServerSSLPort is set to a port different from nxt.apiServerPort and
 nxt.apiSSL=true. If the SSL and non-SSL ports are configured to be the same,
 the nxt.apiSSL property determines whether SSL is used or not. On testnet,
-non-SSL port is hardcoded to 6876 and SSL, if enabled, to 6877.
+non-SSL port is hardcoded to 8876 and SSL, if enabled, to 8877.
 
 Reduced the default nxt.maxRollback to 800. Also added a nxt.trimFrequency
 setting to control how often the trim is run, default 1000.
@@ -5075,11 +5075,11 @@ Enabled use of testnet just by setting nxt.isTestnet property
 in nxt.properties. No other changes are needed.
 
 When switching to testnet by setting nxt.isTestnet=true, peer
-port becomes 6874, UI port 6875, and API server port 6876.
+port becomes 8874, UI port 8875, and API server port 8876.
 Those values are hardcoded to prevent mistakes and take
 precedence over any custom port values in nxt.properties.
 Also, when NOT using testnet, the server will refuse to start
-if peer port is set to 6874, again to prevent accidental
+if peer port is set to 8874, again to prevent accidental
 mixing of real and test blockchains.
 
 For testnet, a new subdirectory for the test blockchain will
