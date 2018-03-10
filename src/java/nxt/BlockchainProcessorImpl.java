@@ -29,6 +29,7 @@ import nxt.util.Listener;
 import nxt.util.Listeners;
 import nxt.util.Logger;
 import nxt.util.ThreadPool;
+import nxt.TrustTransfer;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
@@ -1244,6 +1245,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
             for (DerivedDbTable table : derivedTables) {
                 table.createSearchIndex(con);
             }
+            Logger.logDebugMessage("BlockchainProcessorImpl:addGenesisBlock genesisBlock.height=" + genesisBlock.getHeight() + " baseTarget="+genesisBlock.getBaseTarget());
             BlockDb.commit(genesisBlock);
             Db.db.commitTransaction();
         } catch (SQLException e) {
@@ -1283,7 +1285,13 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
                 List<TransactionImpl> invalidPhasedTransactions = new ArrayList<>();
                 validatePhasedTransactions(previousLastBlock.getHeight(), validPhasedTransactions, invalidPhasedTransactions, duplicates);
                 validateTransactions(block, previousLastBlock, curTime, duplicates, previousLastBlock.getHeight() >= Constants.LAST_CHECKSUM_BLOCK);
-
+                Logger.logDebugMessage("pushBlock: calling createTrustTrusferForBlock previousLastBlock hight= " + previousLastBlock.getHeight() + ", previousLastBlock.PayloadHash= " + Arrays.toString(previousLastBlock.getPayloadHash()));
+                Iterator<TrustTransfer> iterator = createTrustTrusferForBlock(previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
+                while (iterator.hasNext()) {
+                        TrustTransfer trans = iterator.next();
+                        Account recipientAccount = Account.getAccount(trans.getRecipientId());
+                        recipientAccount.addToTrustBalance(trans.getAmount(), trans.getAmount());
+                }
                 block.setPrevious(previousLastBlock);
                 blockListeners.notify(block, Event.BEFORE_BLOCK_ACCEPT);
                 TransactionProcessorImpl.getInstance().requeueAllUnconfirmedTransactions();
@@ -1361,8 +1369,8 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
         }
         if (!block.verifyGenerationSignature() && !Generator.allowsFakeForging(block.getGeneratorPublicKey())) {
             Account generatorAccount = Account.getAccount(block.getGeneratorId());
-            long generatorBalance = generatorAccount == null ? 0 : generatorAccount.getEffectiveBalanceNXT();
-            throw new BlockNotAcceptedException("Generation signature verification failed, effective balance " + generatorBalance, block);
+            long generatorBalance = generatorAccount == null ? 0 : generatorAccount.getEffectiveTrust();
+            throw new BlockNotAcceptedException("Generation signature verification failed, effective trust " + generatorBalance, block);
         }
         if (!block.verifyBlockSignature()) {
             throw new BlockNotAcceptedException("Block signature verification failed", block);
@@ -1620,7 +1628,27 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     private int getTransactionVersion(int previousBlockHeight) {
         return 1;
     }
+    public static final long trustFromCoinPerYearRatioQT = 10; //0.1 coin
+    private static final long blocksPerYear = 525600;
 
+    public  static long trustFromCoins(long blocks, long amountNQT) {
+        return (((amountNQT / trustFromCoinPerYearRatioQT) * blocks)/ blocksPerYear);
+    }
+    public static final int SHARDING_FACTOR = 1440;  
+    public List<TrustTransfer> createTrustTrusferForBlock(int prevHeight, byte[] blockPayloadHash) {
+        List<TrustTransfer> change_list = new ArrayList<TrustTransfer>(); 
+        /* this is the most basic implementation i could think of */
+        DbIterator<Account> iter = Account.iterAllPrevHeightAndShard(prevHeight, "id", SHARDING_FACTOR, blockPayloadHash);
+        Account curr;
+        while (iter.hasNext()) {
+        	curr = iter.next();
+        	if (curr.getBalanceNQT() > 0) {
+        		//Logger.logDebugMessage("adding trust for account id %d", curr.getId());
+        		change_list.add(new TrustTransfer(trustFromCoins(SHARDING_FACTOR,curr.getBalanceNQT()), curr.getId(), blockchain.getHeight()));
+    		}
+    	}
+    	return change_list;
+    }
     private boolean verifyChecksum(byte[] validChecksum, int fromHeight, int toHeight) {
         MessageDigest digest = Crypto.sha256();
         try (Connection con = Db.db.getConnection();
@@ -1718,6 +1746,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
         MessageDigest digest = Crypto.sha256();
         long totalAmountNQT = 0;
         long totalFeeNQT = 0;
+        long totalInterestNQT = 0;
         int payloadLength = 0;
         for (UnconfirmedTransaction unconfirmedTransaction : sortedTransactions) {
             TransactionImpl transaction = unconfirmedTransaction.getTransaction();
@@ -1725,6 +1754,20 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
             digest.update(transaction.bytes());
             totalAmountNQT += transaction.getAmountNQT();
             totalFeeNQT += transaction.getFeeNQT();
+            TransactionType transactionType = transaction.getType();
+            if (transactionType == TransactionType.Loan.SEND_PAY_BACK_LOAN) {
+                Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                Logger.logDebugMessage("generateBlock: attachment.getLoanId(): " + attachment.getLoanId());
+                long loanInterest = getLoanInterest(attachment.getLoanId());
+                if (loanInterest < 0){
+                    Logger.logDebugMessage("generateBlock: invalid loan interest: probably transaction was not found");
+                    throw new RuntimeException("invalid loan interest");
+                }
+                else {
+                    totalInterestNQT += loanInterest;
+                }
+                Logger.logDebugMessage("generateBlock: totalInterestNQT: " + totalInterestNQT);
+            }
             payloadLength += transaction.getFullSize();
         }
         byte[] payloadHash = digest.digest();
@@ -1733,7 +1776,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
         byte[] generationSignature = digest.digest(publicKey);
         byte[] previousBlockHash = Crypto.sha256().digest(previousBlock.bytes());
 
-        BlockImpl block = new BlockImpl(getBlockVersion(previousBlock.getHeight()), blockTimestamp, previousBlock.getId(), totalAmountNQT, totalFeeNQT, payloadLength,
+        BlockImpl block = new BlockImpl(getBlockVersion(previousBlock.getHeight()), blockTimestamp, previousBlock.getId(), totalAmountNQT, totalFeeNQT, totalInterestNQT, payloadLength,
                 payloadHash, publicKey, generationSignature, previousBlockHash, blockTransactions, secretPhrase);
 
         try {
@@ -1756,6 +1799,27 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
         } catch (BlockNotAcceptedException e) {
             Logger.logDebugMessage("Generate block failed: " + e.getMessage());
             throw e;
+        }
+    }
+
+    private static long getLoanInterest(long giveLoanTransactionId) {
+        Connection con = null;
+        long loanInterest = -1;
+        Logger.logDebugMessage("GetLoan: giveLoanTransactionId= " + giveLoanTransactionId);
+        try {
+            con = Db.db.getConnection();
+            PreparedStatement pstmt = con.prepareStatement("SELECT * from account_loan WHERE giving_loan_transaction_id = ?");
+            int i = 0;
+            pstmt.setLong(++i, giveLoanTransactionId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    loanInterest = rs.getLong("LOAN_INTEREST");
+                }
+            }
+            return loanInterest;
+        } catch (SQLException e) {
+            throw new RuntimeException(e.toString(), e);
         }
     }
 

@@ -33,6 +33,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 
+import static nxt.Constants.INITIAL_COIN_TO_TRUST_RATIO;
+
 public final class Genesis {
 
     private static final byte[] CREATOR_PUBLIC_KEY;
@@ -92,6 +94,7 @@ public final class Genesis {
         for (Map.Entry<String, Long> entry : ((Map<String, Long>)balances).entrySet()) {
             Account account = Account.addOrGetAccount(Long.parseUnsignedLong(entry.getKey()));
             account.addToBalanceAndUnconfirmedBalanceNQT(null, 0, entry.getValue());
+            account.addToTrustBalance(entry.getValue()/INITIAL_COIN_TO_TRUST_RATIO, entry.getValue()/INITIAL_COIN_TO_TRUST_RATIO);
             total += entry.getValue();
             if (count++ % 100 == 0) {
                 Db.db.commitTransaction();

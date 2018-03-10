@@ -339,6 +339,46 @@ public abstract class EntityDbTable<T> extends DerivedDbTable {
         }
     }
 
+    public final DbIterator<T> getAllSharded(int height, int from, int to, String shardKey, int numOfShards, byte[] blockPayloadHash) {
+        String sort = defaultSort();
+        checkAvailable(height);
+        Connection con = null;
+        try {
+            con = db.getConnection();
+            PreparedStatement pstmt = con.prepareStatement("SELECT * FROM " + table + " AS a WHERE (" + shardKey + "+?) % ? = 0	AND height <= ?"
+                    + (multiversion ? " AND (latest = TRUE OR (latest = FALSE "
+                    + "AND EXISTS (SELECT 1 FROM " + table + " AS b WHERE b.height > ? AND " + dbKeyFactory.getSelfJoinClause()
+                    + ") AND NOT EXISTS (SELECT 1 FROM " + table + " AS b WHERE b.height <= ? AND " + dbKeyFactory.getSelfJoinClause()
+                    + " AND b.height > a.height))) " : " ") + sort
+                    + DbUtils.limitsClause(from, to));
+            int i = 0;
+            int blockPayloadHashFactor = byteToInt(blockPayloadHash, 4);
+            Logger.logDebugMessage("getAllSharded : blockPayloadHash=" + blockPayloadHashFactor);
+            pstmt.setInt(++i, height + blockPayloadHashFactor);
+            pstmt.setInt(++i, numOfShards);
+            pstmt.setInt(++i, height);
+            if (multiversion) {
+                pstmt.setInt(++i, height);
+                pstmt.setInt(++i, height);
+            }
+            i = DbUtils.setLimits(++i, pstmt, from, to);
+            return getManyBy(con, pstmt, false);
+        } catch (SQLException e) {
+            DbUtils.close(con);
+            throw new RuntimeException(e.toString(), e);
+        }
+    }
+
+    public int byteToInt(byte[] bytes, int length) {
+        int val = 0;
+        if(length>4) throw new RuntimeException("Too big to fit in int");
+        for (int i = 0; i < length; i++) {
+            val=val<<8;
+            val=val|(bytes[i] & 0xFF);
+        }
+        return val;
+    }
+    
     public final int getCount() {
         try (Connection con = db.getConnection();
              PreparedStatement pstmt = con.prepareStatement("SELECT COUNT(*) FROM " + table

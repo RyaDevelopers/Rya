@@ -430,6 +430,10 @@ public class AccountLedger {
         // TYPE_ACCOUNT_CONTROL
             ACCOUNT_CONTROL_EFFECTIVE_BALANCE_LEASING(32, true),
             ACCOUNT_CONTROL_PHASING_ONLY(55, true),
+         // TYPE LOAN
+            LOAN(58, true),
+            SEND_LOAN(59, true),
+            SEND_PAY_BACK_LOAN(60, true),
         // TYPE_CURRENCY
             CURRENCY_DELETION(33, true),
             CURRENCY_DISTRIBUTION(34, true),

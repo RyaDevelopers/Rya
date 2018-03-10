@@ -16,6 +16,7 @@
 
 package nxt;
 
+import nxt.Account.AccountLoan;
 import nxt.Account.ControlType;
 import nxt.AccountLedger.LedgerEvent;
 import nxt.Attachment.AbstractAttachment;
@@ -27,12 +28,14 @@ import org.apache.tika.Tika;
 import org.apache.tika.mime.MediaType;
 import org.json.simple.JSONObject;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static nxt.Constants.ONE_TRUST;
 
 public abstract class TransactionType {
 
@@ -44,6 +47,7 @@ public abstract class TransactionType {
     static final byte TYPE_MONETARY_SYSTEM = 5;
     private static final byte TYPE_DATA = 6;
     static final byte TYPE_SHUFFLING = 7;
+	private static final byte TYPE_LOAN = 8;
 
     private static final byte SUBTYPE_PAYMENT_ORDINARY_PAYMENT = 0;
 
@@ -84,8 +88,21 @@ public abstract class TransactionType {
     private static final byte SUBTYPE_DATA_TAGGED_DATA_UPLOAD = 0;
     private static final byte SUBTYPE_DATA_TAGGED_DATA_EXTEND = 1;
 
+	private static final byte SUBTYPE_LOAN_RETURN_LOAN = 0;
+	private static final byte SUBTYPE_LOAN_GIVE_LOAN = 1;
+
+
     public static TransactionType findTransactionType(byte type, byte subtype) {
         switch (type) {
+			case TYPE_LOAN:
+				switch (subtype) {
+					case SUBTYPE_LOAN_GIVE_LOAN:
+						return Loan.SEND_LOAN;
+					case SUBTYPE_LOAN_RETURN_LOAN:
+						return Loan.SEND_PAY_BACK_LOAN;
+					default:
+						return null;
+				}
             case TYPE_PAYMENT:
                 switch (subtype) {
                     case SUBTYPE_PAYMENT_ORDINARY_PAYMENT:
@@ -208,7 +225,9 @@ public abstract class TransactionType {
 
     // return false iff double spending
     final boolean applyUnconfirmed(TransactionImpl transaction, Account senderAccount) {
+		
         long amountNQT = transaction.getAmountNQT();
+        Logger.logDebugMessage("TransactionType:applyUnconfirmed for amount=" + amountNQT);
         long feeNQT = transaction.getFeeNQT();
         if (transaction.referencedTransactionFullHash() != null) {
             feeNQT = Math.addExact(feeNQT, Constants.UNCONFIRMED_POOL_DEPOSIT_NQT);
@@ -335,6 +354,279 @@ public abstract class TransactionType {
     public final String toString() {
         return getName() + " type: " + getType() + ", subtype: " + getSubtype();
     }
+
+	public static abstract class Loan extends TransactionType {
+
+		private Loan() {
+		}
+
+		@Override
+		public final byte getType() {
+			return TransactionType.TYPE_LOAN;
+		}
+
+		long getTrustNeededForLoan(long amount_nqt) {
+
+
+
+			BigInteger totalTrust = BigInteger.valueOf(Account.getTotalTrust());
+			BigInteger totalBalance = BigInteger.valueOf(Account.getTotalBalanceNQT());
+			BigInteger amount_nqt_big = BigInteger.valueOf(amount_nqt);
+			long res = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
+
+			Logger.logDebugMessage("getTrustNeededForLoan res=" +
+					String.valueOf(res)+ " total_trust="
+					+ String.valueOf(Account.getTotalTrust()) + " total_balance="
+					+ String.valueOf( Account.getTotalBalanceNQT()));
+
+			return res;
+		}
+
+		@Override
+		final boolean applyAttachmentUnconfirmed(Transaction transaction, Account senderAccount) {
+            if (getSubtype() == TransactionType.SUBTYPE_LOAN_GIVE_LOAN) {
+                Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
+                Logger.logDebugMessage("applyig LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
+                if (senderAccount.getUnconfirmedTrustQ() >= getTrustNeededForLoan(attachment.getLoanAmount())) {
+                    senderAccount.addToTrustBalance(0, -getTrustNeededForLoan(attachment.getLoanAmount()));
+                    return true;
+				}
+			} else {
+                Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
+                Logger.logDebugMessage("applyig return loan amount " + String.valueOf(accountLoan.getLoanAmount()));
+                return true;
+			}
+			return false;
+		}
+
+		@Override
+		final void undoAttachmentUnconfirmed(Transaction transaction, Account senderAccount) {
+			if (getSubtype() == TransactionType.SUBTYPE_LOAN_GIVE_LOAN) {
+				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
+				Logger.logDebugMessage("undoAttachmentUnconfirmed LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
+				senderAccount.addToTrustBalance(0, -getTrustNeededForLoan(attachment.getLoanAmount()));
+			} else {
+				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
+				Logger.logDebugMessage("undoAttachmentUnconfirmed return loan amount " + String.valueOf(accountLoan.getLoanAmount()));
+			}
+		}
+
+		@Override
+		public final boolean canHaveRecipient() {
+			return true;
+		}
+
+		@Override
+		public final boolean isPhasingSafe() {
+			return true;
+		}
+
+		
+		public static final TransactionType SEND_LOAN = new Loan() {
+
+			@Override
+			public final byte getSubtype() {
+				return TransactionType.SUBTYPE_LOAN_GIVE_LOAN;
+			}
+
+			@Override
+			public final LedgerEvent getLedgerEvent() {
+				return LedgerEvent.SEND_LOAN;
+			}
+
+			@Override
+			public String getName() {
+				return "SendLoan";
+			}
+						
+
+			@Override
+			Attachment.Loan parseAttachment(ByteBuffer buffer) throws NxtException.NotValidException {
+				return new Attachment.Loan(buffer);
+			}
+
+			@Override
+			Attachment.Loan parseAttachment(JSONObject attachmentData)
+					throws NxtException.NotValidException {
+				return new Attachment.Loan(attachmentData);
+			}
+
+			@Override
+            final void applyAttachment(Transaction transaction, Account senderAccount, Account recipientAccount) {
+                Logger.logDebugMessage("TransactionType:Loan apply attachment");
+
+                Logger.logDebugMessage("TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
+                Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
+                try {
+                    AccountLoan.AddToLoan(transaction.getSenderId(), transaction.getHeight(), attachment.getPeriod(),
+                    		transaction.getAmountNQT(), attachment.getLoanInterest(), transaction.getRecipientId(),
+                            transaction.getId());
+                    senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
+                    Logger.logDebugMessage("TransactionType:SEND_LOAN added loan to DB. transactionId="
+                            + transaction.getId() + ", amount=" + attachment.getLoanAmount());
+                } catch (Exception e) {
+                    // TODO: handle exception
+                    throw e;
+                }
+            }
+
+			@Override
+			void validateAttachment(Transaction transaction) throws NxtException.ValidationException {
+				Logger.logDebugMessage("TransactionType:SEND_LOAN validating attachment " + transaction.getAmountNQT() );
+				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
+				Logger.logDebugMessage("TransactionType:SEND_LOAN  attachment " +  attachment.getLoanAmount() + " " + attachment.getPeriod());
+				if (transaction.getAmountNQT() <= 0 || transaction.getAmountNQT() >= Constants.MAX_BALANCE_NQT) {
+					throw new NxtException.NotValidException("Invalid loan payment");
+				}
+				if (attachment.getLoanInterest() <= 0) {
+					throw new NxtException.NotValidException("Invalid loan: Interest amount can't be zero or negative");
+				}
+				if (transaction.getSenderId() == transaction.getRecipientId()) {
+					throw new NxtException.NotValidException("Invalid loan: Can't send loan to yourself");
+				}
+				if (attachment.getLoanAmount() <= 0) {
+					throw new NxtException.NotValidException("Invalid loan: Amount can't be zero or negative");
+				}
+				if (attachment.getPeriod() <= 0 || attachment.getPeriod() >= Constants.MAX_LOAN_DURATION) {
+					throw new NxtException.NotValidException("Invalid loan: Invalid loan duration");
+				}
+
+				// need more validations, neet to validate the return amount is the same as the give loan amount
+				//
+				Logger.logDebugMessage("TransactionType:SEND_LOAN attachment validation succeed!");
+			}
+
+		};
+
+		public static final TransactionType SEND_PAY_BACK_LOAN = new Loan() {
+
+			@Override
+			public final byte getSubtype() {
+				return TransactionType.SUBTYPE_LOAN_RETURN_LOAN;
+			}
+
+			@Override
+			public final LedgerEvent getLedgerEvent() {
+				return LedgerEvent.SEND_PAY_BACK_LOAN;
+			}
+
+			@Override
+			public String getName() {
+				return "SendPayBackLoan";
+			}
+
+
+			@Override
+			Attachment.PayBackLoan parseAttachment(ByteBuffer buffer) throws NxtException.NotValidException {
+				return new Attachment.PayBackLoan(buffer);
+			}
+
+			@Override
+			Attachment.PayBackLoan parseAttachment(JSONObject attachmentData)
+					throws NxtException.NotValidException {
+				return new Attachment.PayBackLoan(attachmentData);
+			}
+
+			long trustRevFromCoins(long amountNQT) {
+				return  BlockchainProcessorImpl.trustFromCoins(1, amountNQT);
+			}
+
+			long coinsRevFromTrust(long trustQ, long fees_and_intrests_in_block) {
+				return  (fees_and_intrests_in_block * trustQ/Account.getTotalTrust());
+			}
+
+
+			long lostFromCoins(long blocks, long amoutNQT, long fees_and_intrests_in_block) {
+				long total_amount = amoutNQT;
+				long total_trust = 0;
+				for (int i =0; i < blocks; i++) {
+					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block);
+					total_trust += trustRevFromCoins(total_amount);
+				}
+				return total_trust;
+			}
+
+			long lostFromTrust(long blocks, long trustQ, long fees_and_intrests_in_block) {
+				long total_amount = 0;
+				long total_trust = trustQ;
+				for (int i =0; i < blocks; i++) {
+					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block);
+					total_trust += trustRevFromCoins(total_amount);
+				}
+				return total_trust + lostFromCoins(blocks, total_amount, fees_and_intrests_in_block);
+			}
+
+
+
+			long trustGain(long loanLenght, long loan_amount, long loan_fee, long fees_and_intrests_in_block) {
+				long trust_for_loan = getTrustNeededForLoan(loan_amount);
+				return lostFromCoins(loanLenght, loan_amount, fees_and_intrests_in_block) +
+						lostFromCoins(loanLenght, loan_fee, fees_and_intrests_in_block) +
+						lostFromTrust(loanLenght, trust_for_loan, fees_and_intrests_in_block);
+			}
+
+			@Override
+            final void applyAttachment(Transaction transaction, Account senderAccount, Account recipientAccount) {
+                Logger.logDebugMessage("applyAttachment: TransactionType:Loan apply attachment");
+                Logger.logDebugMessage("applyAttachment: TransactionSubType:SUBTYPE_LOAN_RETURN_LOAN");
+                Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                AccountLoan.PayBackLoan(attachment.getLoanId(), transaction.getId());
+				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
+
+                long loan_len = accountLoan.getLoanBlocksDuration();
+
+                long trust_gain_q = trustGain(loan_len, accountLoan.getLoanAmount() , transaction.getFeeNQT(), transaction.getBlock().getTotalFeeNQT() /* TODO add intrest */);
+                senderAccount.addToTrustBalance(trust_gain_q/2,trust_gain_q/2);
+                recipientAccount.addToTrustBalance(getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2,
+						getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2);
+                Logger.logDebugMessage("TransactionType:SEND_LOAN update pay back to loan in DB. transactionId="+ transaction.getId() + ", loanId()=" + attachment.getLoanId());
+            }
+
+			@Override
+			void validateAttachment(Transaction transaction) throws NxtException.ValidationException {
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN validating transaction " + transaction.getId());
+				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment loadId = " +  attachment.getLoanId());
+				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
+
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getReturnLoanTransactionId() = " + accountLoan.getReturnLoanTransactionId());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanBlocksDuration() = " + accountLoan.getLoanBlocksDuration());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanAmount() = " + attachment.getPayBackLoanAmount());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanAmount() = " + accountLoan.getLoanAmount());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanFee() = " + attachment.getPayBackLoanFee());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN Nxt.getBlockchain().getHeight() = " + Nxt.getBlockchain().getHeight());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getAmountNQT() = " + transaction.getAmountNQT());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getId() = " + transaction.getId());
+
+				if(accountLoan == null) {
+					throw new NxtException.NotValidException("Invalid pay back loan: invalid loan id " + attachment.getLoanId());
+				}
+				if(accountLoan.getReturnLoanTransactionId() != 0) {
+					throw new NxtException.NotValidException("Invalid pay back loan: invalid return loan id, this loan was already payed back");
+				}
+				long loanReturnBlockLimit = accountLoan.getLonHeightFrom() + accountLoan.getLoanBlocksDuration();
+				if(loanReturnBlockLimit < Nxt.getBlockchain().getHeight()) {
+					throw new NxtException.NotValidException("Invalid pay back loan: current Height is too high(" + Nxt.getBlockchain().getHeight() + ") was suppose to be payed back until Height: " + loanReturnBlockLimit);
+				}
+				long feeNxt = attachment.getPayBackLoanFee();
+				long interestNxt = accountLoan.getLoanInterest();
+				if (attachment.getPayBackLoanAmount() != accountLoan.getLoanAmount() + interestNxt) {
+					throw new NxtException.NotValidException("Invalid pay back loan: pay back amount (" + attachment.getPayBackLoanAmount() + ")" +
+							"doesn't match loan amount (" + accountLoan.getLoanAmount() + ")" +
+							" + pay back loan fee (" + feeNxt + ")," +
+							" + pay back loan interest (" + interestNxt + "), please pay: " + ((long)(accountLoan.getLoanAmount() + interestNxt)));
+				}
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment validation succeed!");
+			}
+
+			public long getLoanInterest(long loanId) {
+				AccountLoan accountLoan = AccountLoan.GetLoan(loanId);
+				return accountLoan.getLoanInterest();
+			}
+		};
+	}
 
     public static abstract class Payment extends TransactionType {
 

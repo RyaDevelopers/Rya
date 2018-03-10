@@ -34,8 +34,8 @@ public class GeneratorTest extends BlockchainTest {
         BlockImpl lastBlock = blockchain.getLastBlock();
         BigInteger hit = Generator.getHit(publicKey, lastBlock);
         Account account = Account.getAccount(publicKey);
-        BigInteger effectiveBalance = BigInteger.valueOf(account == null || account.getEffectiveBalanceNXT() <= 0 ? 0 : account.getEffectiveBalanceNXT());
-        long hitTime = Generator.getHitTime(effectiveBalance, hit, lastBlock);
+        BigInteger effectiveTrust = BigInteger.valueOf(account == null || account.getEffectiveTrust() <= 0 ? 0 : account.getEffectiveTrust());
+        long hitTime = Generator.getHitTime(effectiveTrust, hit, lastBlock);
         long deadline = hitTime - lastBlock.getTimestamp();
         Generator generator = Generator.startForging(ALICE.getSecretPhrase());
         int i=1;

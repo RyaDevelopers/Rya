@@ -21,13 +21,7 @@ import nxt.AccountLedger.LedgerEvent;
 import nxt.AccountLedger.LedgerHolding;
 import nxt.crypto.Crypto;
 import nxt.crypto.EncryptedData;
-import nxt.db.DbClause;
-import nxt.db.DbIterator;
-import nxt.db.DbKey;
-import nxt.db.DbUtils;
-import nxt.db.DerivedDbTable;
-import nxt.db.VersionedEntityDbTable;
-import nxt.db.VersionedPersistentDbTable;
+import nxt.db.*;
 import nxt.util.Convert;
 import nxt.util.Listener;
 import nxt.util.Listeners;
@@ -37,12 +31,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -51,7 +40,7 @@ public final class Account {
 
     public enum Event {
         BALANCE, UNCONFIRMED_BALANCE, ASSET_BALANCE, UNCONFIRMED_ASSET_BALANCE, CURRENCY_BALANCE, UNCONFIRMED_CURRENCY_BALANCE,
-        LEASE_SCHEDULED, LEASE_STARTED, LEASE_ENDED, SET_PROPERTY, DELETE_PROPERTY
+        LEASE_SCHEDULED, LEASE_STARTED, LEASE_ENDED, SET_PROPERTY, DELETE_PROPERTY, TRUST, UNCONFIRMED_TRUST
     }
 
     public enum ControlType {
@@ -200,7 +189,7 @@ public final class Account {
         }
 
     }
-
+    
     public static final class AccountLease {
 
         private final long lessorId;
@@ -278,6 +267,283 @@ public final class Account {
             return nextLeasingHeightTo;
         }
 
+    }
+    
+    public static final class AccountLoan {
+
+        private final long loanGetterId;
+        private final long loanerId;
+        private final DbKey dbKey;
+        private long loanAmount;
+        private long loanInterest;
+        private long lonHeightFrom;
+        private long loanBlocksDuration;
+        private long giveLoanTransactionId;
+        private long returnLoanTransactionId;
+        
+
+        private AccountLoan(long loanerId,
+                             long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, long giveLoanTransactionId) {
+            this.loanerId = loanerId;
+            this.dbKey = accountLoanDbKeyFactory.newKey(this.getLoanerId()); //TODO investigate is this means only one loan per loaner??
+            this.setLonHeightFrom(loanHeightFrom);
+            this.setLoanBlocksDuration(loanBlocksDuration);
+            this.setLoanAmount(loanAmount);
+            this.setLoanInterest(loanInterest);
+            this.loanGetterId = loanGetterId;
+            this.setGiveLoanTransactionId(giveLoanTransactionId);
+            this.setReturnLoanTransactionId(0);
+
+        }
+        
+        private AccountLoan(ResultSet rs, DbKey dbKey) throws SQLException {
+            this.loanerId = rs.getLong("loaner_id");
+            this.dbKey = dbKey;
+            this.setLonHeightFrom(rs.getLong("LOAN_HEIGHT_FROM"));
+            this.setLoanBlocksDuration(rs.getLong("loan_blocks_duration"));
+            this.setLoanAmount(rs.getLong("LOAN_AMOUNT"));
+            this.setLoanInterest(rs.getLong("LOAN_INTEREST"));
+            this.loanGetterId = rs.getLong("LOAN_GETTER_ID");
+            this.setGiveLoanTransactionId(rs.getLong("giving_loan_transaction_id"));
+            this.setReturnLoanTransactionId(rs.getLong("returning_loan_transaction_id"));
+        }
+        
+        public static boolean AddToLoan(long loanerId,
+                long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, long giveLoanTransactionId) {
+        	AccountLoan newLoan = new AccountLoan(loanerId, loanHeightFrom, loanBlocksDuration, loanAmount, loanInterest, loanGetterId, giveLoanTransactionId);
+        	accountLoanTable.insert(newLoan);
+        	
+        	return true;
+        }
+
+        public static boolean PayBackLoan(long giveLoanTransactionId, long returnLoanTransactionId) {
+            Connection con = null;
+            Logger.logDebugMessage("PayBackLoan: giveLoanTransactionId= " + giveLoanTransactionId + "returnLoanTransactionId=" + returnLoanTransactionId);
+            try {
+                con = Db.db.getConnection();
+                PreparedStatement pstmt = con.prepareStatement("UPDATE account_loan set returning_loan_transaction_id = ? where giving_loan_transaction_id = ?");
+
+                int i = 0;
+                pstmt.setLong(++i, returnLoanTransactionId);
+                pstmt.setLong(++i, giveLoanTransactionId);
+
+                pstmt.executeUpdate();
+
+            } catch (SQLException e) {
+                DbUtils.close(con);
+                throw new RuntimeException(e.toString(), e);
+            }
+            return true;
+        }
+
+        public static AccountLoan GetLoan(long giveLoanTransactionId) {
+            Connection con = null;
+            Logger.logDebugMessage("GetLoan: giveLoanTransactionId= " + giveLoanTransactionId);
+            try {
+                con = Db.db.getConnection();
+                PreparedStatement pstmt = con.prepareStatement("SELECT * from account_loan WHERE giving_loan_transaction_id = ?");
+                int i = 0;
+                pstmt.setLong(++i, giveLoanTransactionId);
+
+                AccountLoan accountLoan = null;
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        accountLoan = new AccountLoan(rs, accountLoanDbKeyFactory.newKey(rs.getLong("Loaner_Id")));
+                    }
+                }
+                return accountLoan;
+            } catch (SQLException e) {
+                DbUtils.close(con);
+                throw new RuntimeException(e.toString(), e);
+            }
+        }
+
+        private void save(Connection con) throws SQLException {
+            try (PreparedStatement pstmt = con.prepareStatement("MERGE INTO account_loan "
+                    + "(LOAN_GETTER_ID, LOANER_ID, loan_amount, loan_interest, loan_height_from, "
+                    + "loan_blocks_duration, giving_loan_transaction_id , returning_loan_transaction_id,height, latest) "
+                    + "KEY (loaner_id, height) VALUES (?, ?, ?, ?, ?, ?, ?,?,?, TRUE)")) {
+                int i = 0;
+                pstmt.setLong(++i, this.getLoanGetterId());
+                pstmt.setLong(++i, this.getLoanerId());
+                DbUtils.setLongZeroToNull(pstmt, ++i, this.getLoanAmount());
+                DbUtils.setLongZeroToNull(pstmt, ++i, this.getLoanInterest());
+                DbUtils.setLongZeroToNull(pstmt, ++i, this.getLonHeightFrom());
+                DbUtils.setLongZeroToNull(pstmt, ++i, this.getLoanBlocksDuration());
+                pstmt.setLong(++i, this.getGiveLoanTransactionId());
+                DbUtils.setLongZeroToNull(pstmt, ++i, this.getReturnLoanTransactionId());
+                pstmt.setInt(++i, Nxt.getBlockchain().getHeight());
+                
+                pstmt.executeUpdate();
+            }
+        }
+
+
+		/**
+		 * @return the loanId
+		 */
+		public long getLoanGetterId() {
+			return loanGetterId;
+		}
+
+		/**
+		 * @return the loanerId
+		 */
+		public long getLoanerId() {
+			return loanerId;
+		}
+
+		/**
+		 * @return the dbKey
+		 */
+		public DbKey getDbKey() {
+			return dbKey;
+		}
+
+		/**
+		 * @return the loanAmount
+		 */
+		public long getLoanAmount() {
+			return loanAmount;
+		}
+
+		/**
+		 * @param loanAmount the loanAmount to set
+		 */
+		public void setLoanAmount(long loanAmount) {
+			this.loanAmount = loanAmount;
+		}
+
+		/**
+		 * @return the loanInterest
+		 */
+		public long getLoanInterest() {
+			return loanInterest;
+		}
+
+		/**
+		 * @param loanInterest the loanInterest to set
+		 */
+		public void setLoanInterest(long loanInterest) {
+			this.loanInterest = loanInterest;
+		}
+
+		/**
+		 * @return the lonHeightFrom
+		 */
+		public long getLonHeightFrom() {
+			return lonHeightFrom;
+		}
+
+		/**
+		 * @param lonHeightFrom the lonHeightFrom to set
+		 */
+		public void setLonHeightFrom(long lonHeightFrom) {
+			this.lonHeightFrom = lonHeightFrom;
+		}
+
+		/**
+		 * @return the loanBlocksDuration
+		 */
+		public long getLoanBlocksDuration() {
+			return loanBlocksDuration;
+		}
+
+		/**
+		 * @param loanHeightTo the loanHeightTo to set
+		 */
+		public void setLoanBlocksDuration(long loanBlocksDuration) {
+			this.loanBlocksDuration = loanBlocksDuration;
+		}
+
+		/**
+		 * @return the giveLoanTransactionId
+		 */
+		public long getGiveLoanTransactionId() {
+			return giveLoanTransactionId;
+		}
+
+		/**
+		 * @param giveLoanTransactionId the giveLoanTransactionId to set
+		 */
+		public void setGiveLoanTransactionId(long giveLoanTransactionId) {
+			this.giveLoanTransactionId = giveLoanTransactionId;
+		}
+
+		/**
+		 * @return the returnLoanTransactionId
+		 */
+		public long getReturnLoanTransactionId() {
+			return returnLoanTransactionId;
+		}
+
+		/**
+		 * @param returnLoanTransactionId the returnLoanTransactionId to set
+		 */
+		public void setReturnLoanTransactionId(long returnLoanTransactionId) {
+			this.returnLoanTransactionId = returnLoanTransactionId;
+		}
+
+    }
+
+    public static final class AccountTrust {
+        private final long accountId;
+        private final DbKey dbKey;
+        private long units;
+        private long unconfirmedUnits;
+
+
+        private AccountTrust(long accountId,
+                             long units, long unconfirmedUnits) {
+            this.accountId = accountId;
+            this.dbKey = accountTrustDbKeyFactory.newKey(this.accountId);
+            this.units = units;
+            this.unconfirmedUnits = unconfirmedUnits;
+        }
+
+        private AccountTrust(ResultSet rs, DbKey dbKey) throws SQLException {
+            this.accountId = rs.getLong("account_id");
+            this.dbKey = dbKey;
+            this.units = rs.getLong("units");
+            this.unconfirmedUnits = rs.getLong("unconfirmed_units");
+        }
+
+        private void save(Connection con) throws SQLException {
+            try (PreparedStatement pstmt = con.prepareStatement("MERGE INTO account_trust "
+                    + "(ACCOUNT_ID , UNITS , UNCONFIRMED_UNITS , HEIGHT ,LATEST) "
+                    + "KEY (account_id) VALUES (?, ?, ?, ?, TRUE)")) { //TODO, change to (account_id,height)
+            int i = 0;
+            pstmt.setLong(++i, this.accountId);
+            pstmt.setLong(++i, this.units);
+            pstmt.setLong(++i, this.unconfirmedUnits);
+            pstmt.setInt(++i, Nxt.getBlockchain().getHeight());
+            pstmt.executeUpdate();
+            }
+        }
+
+        private void save() {
+            checkBalance(this.accountId, this.units, this.unconfirmedUnits); /* TODO - is it true? */ /* TODO - handle unconfiremed*/
+            if (this.units > 0 || this.unconfirmedUnits > 0) {
+                accountTrustTable.insert(this);
+            } else if (this.units == 0 && this.unconfirmedUnits == 0) {
+                Logger.logDebugMessage("save: ccountTrustTable.delete: " + this.accountId);
+                accountTrustTable.delete(this);
+            }
+        }
+        
+        void addTrustToBalanceAndUnconfirmedBalanceNQT(LedgerEvent event, long eventId, long trustAmountToAdd) { //TODO ccc this function adds monet to recipient
+            if (trustAmountToAdd == 0) {
+                return;
+            }
+
+            this.units = Math.addExact(this.units, trustAmountToAdd);
+            this.unconfirmedUnits = Math.addExact(this.unconfirmedUnits, trustAmountToAdd);
+            checkBalance(this.accountId, this.units, this.unconfirmedUnits);
+            save();
+            trustListeners.notify(this, Event.TRUST);
+            trustListeners.notify(this, Event.UNCONFIRMED_TRUST);
+
+        }
     }
 
     public static final class AccountInfo {
@@ -511,11 +777,30 @@ public final class Account {
 
     };
 
+    private static final DbKey.LongKeyFactory<AccountTrust> accountTrustDbKeyFactory = new DbKey.LongKeyFactory<AccountTrust>("account_id") {
+
+        @Override
+        public DbKey newKey(AccountTrust accountTrust) {
+            return accountTrust.dbKey == null ? newKey(accountTrust.accountId) : accountTrust.dbKey;
+        }
+    };
+
+
     private static final DbKey.LongKeyFactory<AccountLease> accountLeaseDbKeyFactory = new DbKey.LongKeyFactory<AccountLease>("lessor_id") {
 
         @Override
         public DbKey newKey(AccountLease accountLease) {
             return accountLease.dbKey;
+        }
+
+    };
+    
+    
+    private static final DbKey.LongKeyFactory<AccountLoan> accountLoanDbKeyFactory = new DbKey.LongKeyFactory<AccountLoan>("giving_loan_transaction_id") {
+
+        @Override
+        public DbKey newKey(AccountLoan accountLoan) {
+        	return accountLoan.dbKey == null ? newKey(accountLoan.loanerId) : accountLoan.dbKey;
         }
 
     };
@@ -585,6 +870,31 @@ public final class Account {
             return accountAsset.dbKey;
         }
 
+    };
+    private static final VersionedEntityDbTable<AccountTrust> accountTrustTable = new VersionedEntityDbTable<AccountTrust>("account_trust", accountTrustDbKeyFactory) {
+
+        @Override
+        protected AccountTrust load(Connection con, ResultSet rs, DbKey dbKey) throws SQLException {
+            return new AccountTrust(rs, dbKey);
+        }
+
+        @Override
+        protected void save(Connection con, AccountTrust accountTrust) throws SQLException {
+            accountTrust.save(con);
+        }
+    };
+    
+    private static final VersionedEntityDbTable<AccountLoan> accountLoanTable = new VersionedEntityDbTable<AccountLoan>("account_loan", accountLoanDbKeyFactory) {
+
+        @Override
+        protected AccountLoan load(Connection con, ResultSet rs, DbKey dbKey) throws SQLException {
+            return new AccountLoan(rs, dbKey);
+        }
+
+        @Override
+        protected void save(Connection con, AccountLoan accountLoan) throws SQLException {
+        	accountLoan.save(con);
+        }
     };
 
     private static final VersionedEntityDbTable<AccountAsset> accountAssetTable = new VersionedEntityDbTable<AccountAsset>("account_asset", accountAssetDbKeyFactory) {
@@ -698,6 +1008,8 @@ public final class Account {
     private static final Listeners<AccountCurrency,Event> currencyListeners = new Listeners<>();
 
     private static final Listeners<AccountLease,Event> leaseListeners = new Listeners<>();
+    
+    private static final Listeners<AccountTrust,Event> trustListeners = new Listeners<>();
 
     private static final Listeners<AccountProperty,Event> propertyListeners = new Listeners<>();
 
@@ -834,10 +1146,12 @@ public final class Account {
         DbKey dbKey = accountDbKeyFactory.newKey(id);
         Account account = accountTable.get(dbKey);
         if (account == null) {
+            Logger.logDebugMessage("failed to get account for id : " + id);
             PublicKey publicKey = publicKeyTable.get(dbKey);
             if (publicKey != null) {
                 account = accountTable.newEntity(dbKey);
                 account.publicKey = publicKey;
+                Logger.logDebugMessage("failed to public key, created new account : " + account.toString());
             }
         }
         return account;
@@ -1206,6 +1520,70 @@ public final class Account {
         return forgedBalanceNQT;
     }
 
+    public long getEffectiveTrust() {
+        return getEffectiveTrust(Nxt.getBlockchain().getHeight());
+    }
+
+    public long getEffectiveTrust(int height) {
+        /* we ignore the height since in our model we do not to wait 1440 blocks for trust, it cannot be transferred and therefor
+            one cannot manipulate the forging.
+         */
+        Logger.logDebugMessage("getEffectiveTrust for id: " + this.id);
+        AccountTrust accountTrust = null;
+        DbKey newKey = accountTrustDbKeyFactory.newKey(this.id);
+        long trustBalance = 0;
+
+        try {
+            accountTrust = accountTrustTable.get(newKey);
+            trustBalance = accountTrust == null ? 0 : accountTrust.units / Constants.ONE_TRUST;
+        } catch (RuntimeException e) {
+            Logger.logInfoMessage(e.getMessage());
+            e.printStackTrace();
+        }
+        return trustBalance;
+    }
+
+    public long getEffectiveTrustQ() {
+        Logger.logDebugMessage("getEffectiveTrustQ for id: " + this.id);
+        return getEffectiveTrust(Nxt.getBlockchain().getHeight());
+    }
+
+    public long getEffectiveTrustQ(int height) {
+        Logger.logDebugMessage("getEffectiveTrustQ for id: " + this.id);
+        AccountTrust accountTrust = null;
+        DbKey newKey = accountTrustDbKeyFactory.newKey(this.id);
+        long trustBalance = 0;
+        try {
+            accountTrust = accountTrustTable.get(newKey);
+            trustBalance = accountTrust == null ? 0 : accountTrust.units / Constants.ONE_TRUST;
+        } catch (RuntimeException e) {
+            Logger.logInfoMessage(e.getMessage());
+            e.printStackTrace();
+        }
+        return trustBalance;
+    }
+
+    public long getUnconfirmedTrustQ() {
+        Logger.logDebugMessage("getUnconfirmedTrustQ for id: " + this.id);
+        return getUnconfirmedTrustQ(Nxt.getBlockchain().getHeight());
+    }
+
+    public long getUnconfirmedTrustQ(int height) {
+        Logger.logDebugMessage("getUnconfirmedTrustQ2 for id: " + this.id);
+        AccountTrust accountTrust = null;
+        DbKey newKey = accountTrustDbKeyFactory.newKey(this.id);
+        long trustBalance = 0;
+
+        try {
+            accountTrust = accountTrustTable.get(newKey);
+            trustBalance = accountTrust == null ? 0 : accountTrust.unconfirmedUnits;
+        } catch (RuntimeException e) {
+            Logger.logInfoMessage(e.getMessage());
+            e.printStackTrace();
+        }
+        return trustBalance;
+    }
+
     public long getEffectiveBalanceNXT() {
         return getEffectiveBalanceNXT(Nxt.getBlockchain().getHeight());
     }
@@ -1213,6 +1591,8 @@ public final class Account {
     public long getEffectiveBalanceNXT(int height) {
         if (height <= 1440) {
             Account genesisAccount = getAccount(id, 0);
+            if (genesisAccount != null)
+                Logger.logDebugMessage("we are starting the chain, : " + String.valueOf(genesisAccount.getBalanceNQT() / Constants.ONE_NXT));
             return genesisAccount == null ? 0 : genesisAccount.getBalanceNQT() / Constants.ONE_NXT;
         }
         if (this.publicKey == null) {
@@ -1289,6 +1669,18 @@ public final class Account {
 
     public long getGuaranteedBalanceNQT() {
         return getGuaranteedBalanceNQT(Constants.GUARANTEED_BALANCE_CONFIRMATIONS, Nxt.getBlockchain().getHeight());
+    }
+    
+    public static DbIterator<Account> iterAll() {
+        return accountTable.getAll(0, -1);
+    }
+    
+    public static DbIterator<Account> iterAllFromHeight(int height) {
+        return accountTable.getAll(height ,0, -1);
+    }
+    
+    public static DbIterator<Account> iterAllPrevHeightAndShard(int height, String shardKey, int shardFactor, byte[] blockPayloadHash) {
+        return accountTable.getAllSharded(height ,0, -1, shardKey, shardFactor, blockPayloadHash);
     }
 
     public long getGuaranteedBalanceNQT(final int numberOfConfirmations, final int currentHeight) {
@@ -1523,6 +1915,41 @@ public final class Account {
         }
     }
 
+    void addToTrustBalance(long quantityConfirmed, long  quantityUnconfirmed) {
+
+        AccountTrust accountTrust = null;
+        DbKey newKey = accountTrustDbKeyFactory.newKey(this.id);
+
+        try {
+            accountTrust = accountTrustTable.get(newKey);
+            long trustBalance = accountTrust == null ? 0 : accountTrust.units;
+            trustBalance = Math.addExact(trustBalance, quantityConfirmed);
+
+            long trustUnconfirmedBalance = accountTrust == null ? 0 : accountTrust.unconfirmedUnits;
+            trustUnconfirmedBalance = Math.addExact(trustUnconfirmedBalance, quantityUnconfirmed);
+
+
+            Logger.logDebugMessage("for id="+String.valueOf(this.id)+" adding "+String.valueOf(quantityConfirmed)+
+                    " now "+String.valueOf(trustBalance) +  "adding to unconfirmes " +String.valueOf(quantityUnconfirmed)
+                    + " now " + String.valueOf(trustUnconfirmedBalance));
+
+            if (accountTrust == null) {
+                accountTrust = new AccountTrust(this.id, trustBalance, trustUnconfirmedBalance);
+
+                Logger.logDebugMessage("for id="+String.valueOf(this.id)+" first rime in DB");
+
+            } else {
+                accountTrust.units = trustBalance;
+                accountTrust.unconfirmedUnits = trustUnconfirmedBalance;
+            }
+            accountTrust.save();
+        } catch (RuntimeException e) {
+            Logger.logInfoMessage(e.getMessage());
+            e.printStackTrace();
+        }
+
+    }
+
     void addToUnconfirmedAssetBalanceQNT(LedgerEvent event, long eventId, long assetId, long quantityQNT) {
         if (quantityQNT == 0) {
             return;
@@ -1754,11 +2181,12 @@ public final class Account {
         }
     }
 
-    void addToForgedBalanceNQT(long amountNQT) {
-        if (amountNQT == 0) {
+    void addToForgedBalanceNQT(long feeAmountNQT, long interestAmountNQT) {
+        if (feeAmountNQT + interestAmountNQT == 0) {
             return;
         }
-        this.forgedBalanceNQT = Math.addExact(this.forgedBalanceNQT, amountNQT);
+        this.forgedBalanceNQT = Math.addExact(this.forgedBalanceNQT, feeAmountNQT);
+        this.forgedBalanceNQT = Math.addExact(this.forgedBalanceNQT, interestAmountNQT);
         save();
     }
 
@@ -1802,6 +2230,38 @@ public final class Account {
         } catch (SQLException e) {
             throw new RuntimeException(e.toString(), e);
         }
+    }
+
+    public static long getTotalTrust(){
+        long total = 0;
+        try (Connection con = Db.db.getConnection()){
+            PreparedStatement pstmtSelect = con.prepareStatement("SELECT sum(UNITS) total FROM account_trust");
+           try (ResultSet rs = pstmtSelect.executeQuery()) {
+                if (rs.next()) {
+                    total = (rs.getLong("total"));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e.toString(), e);
+        }
+        Logger.logDebugMessage("total trust=" + String.valueOf(total));
+        return total;
+    }
+
+    public static long getTotalBalanceNQT(){
+        long total = 0;
+        try (Connection con = Db.db.getConnection()){
+            PreparedStatement pstmtSelect = con.prepareStatement("SELECT sum(BALANCE) total FROM account");
+            try (ResultSet rs = pstmtSelect.executeQuery()) {
+                if (rs.next()) {
+                    total = (rs.getLong("total"));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e.toString(), e);
+        }
+        Logger.logDebugMessage("total balance=" + String.valueOf(total));
+        return total;
     }
 
     void payDividends(final long transactionId, Attachment.ColoredCoinsDividendPayment attachment) {

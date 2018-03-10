@@ -41,6 +41,7 @@ final class BlockImpl implements Block {
     private final byte[] previousBlockHash;
     private final long totalAmountNQT;
     private final long totalFeeNQT;
+    private final long totalInterestNQT;
     private final int payloadLength;
     private final byte[] generationSignature;
     private final byte[] payloadHash;
@@ -58,26 +59,28 @@ final class BlockImpl implements Block {
 
 
     BlockImpl(byte[] generatorPublicKey, byte[] generationSignature) {
-        this(-1, 0, 0, 0, 0, 0, new byte[32], generatorPublicKey, generationSignature, new byte[64],
+        this(-1, 0, 0, 0, 0, 0, 0, new byte[32], generatorPublicKey, generationSignature, new byte[64],
                 new byte[32], Collections.emptyList());
         this.height = 0;
     }
 
-    BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountNQT, long totalFeeNQT, int payloadLength, byte[] payloadHash,
-              byte[] generatorPublicKey, byte[] generationSignature, byte[] previousBlockHash, List<TransactionImpl> transactions, String secretPhrase) {
-        this(version, timestamp, previousBlockId, totalAmountNQT, totalFeeNQT, payloadLength, payloadHash,
+    BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountNQT, long totalFeeNQT, long totalInterestNQT, int payloadLength, byte[] payloadHash,
+              byte[] generatorPublicKey, byte[] generationSignature, byte[] previousBlockHash, List<TransactionImpl> transactions,
+              String secretPhrase) {
+        this(version, timestamp, previousBlockId, totalAmountNQT, totalFeeNQT, totalInterestNQT, payloadLength, payloadHash,
                 generatorPublicKey, generationSignature, null, previousBlockHash, transactions);
         blockSignature = Crypto.sign(bytes(), secretPhrase);
         bytes = null;
     }
 
-    BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountNQT, long totalFeeNQT, int payloadLength, byte[] payloadHash,
+    BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountNQT, long totalFeeNQT, long totalInterestNQT, int payloadLength, byte[] payloadHash,
               byte[] generatorPublicKey, byte[] generationSignature, byte[] blockSignature, byte[] previousBlockHash, List<TransactionImpl> transactions) {
         this.version = version;
         this.timestamp = timestamp;
         this.previousBlockId = previousBlockId;
         this.totalAmountNQT = totalAmountNQT;
         this.totalFeeNQT = totalFeeNQT;
+        this.totalInterestNQT = totalInterestNQT;
         this.payloadLength = payloadLength;
         this.payloadHash = payloadHash;
         this.generatorPublicKey = generatorPublicKey;
@@ -89,11 +92,11 @@ final class BlockImpl implements Block {
         }
     }
 
-    BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountNQT, long totalFeeNQT, int payloadLength,
+    BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountNQT, long totalFeeNQT, long totalInterestNQT, int payloadLength,
               byte[] payloadHash, long generatorId, byte[] generationSignature, byte[] blockSignature,
               byte[] previousBlockHash, BigInteger cumulativeDifficulty, long baseTarget, long nextBlockId, int height, long id,
               List<TransactionImpl> blockTransactions) {
-        this(version, timestamp, previousBlockId, totalAmountNQT, totalFeeNQT, payloadLength, payloadHash,
+        this(version, timestamp, previousBlockId, totalAmountNQT, totalFeeNQT, totalInterestNQT, payloadLength, payloadHash,
                 null, generationSignature, blockSignature, previousBlockHash, null);
         this.cumulativeDifficulty = cumulativeDifficulty;
         this.baseTarget = baseTarget;
@@ -140,6 +143,11 @@ final class BlockImpl implements Block {
     @Override
     public long getTotalFeeNQT() {
         return totalFeeNQT;
+    }
+
+    @Override
+    public long getTotalInterestNQT() {
+        return totalInterestNQT;
     }
 
     @Override
@@ -252,6 +260,7 @@ final class BlockImpl implements Block {
         json.put("previousBlock", Long.toUnsignedString(previousBlockId));
         json.put("totalAmountNQT", totalAmountNQT);
         json.put("totalFeeNQT", totalFeeNQT);
+        json.put("totalInterestNQT", totalInterestNQT);
         json.put("payloadLength", payloadLength);
         json.put("payloadHash", Convert.toHexString(payloadHash));
         json.put("generatorPublicKey", Convert.toHexString(getGeneratorPublicKey()));
@@ -271,6 +280,7 @@ final class BlockImpl implements Block {
             long previousBlock = Convert.parseUnsignedLong((String) blockData.get("previousBlock"));
             long totalAmountNQT = Convert.parseLong(blockData.get("totalAmountNQT"));
             long totalFeeNQT = Convert.parseLong(blockData.get("totalFeeNQT"));
+            long totalInterestNQT = Convert.parseLong(blockData.get("totalInterestNQT"));
             int payloadLength = ((Long) blockData.get("payloadLength")).intValue();
             byte[] payloadHash = Convert.parseHexString((String) blockData.get("payloadHash"));
             byte[] generatorPublicKey = Convert.parseHexString((String) blockData.get("generatorPublicKey"));
@@ -281,7 +291,7 @@ final class BlockImpl implements Block {
             for (Object transactionData : (JSONArray) blockData.get("transactions")) {
                 blockTransactions.add(TransactionImpl.parseTransaction((JSONObject) transactionData));
             }
-            BlockImpl block = new BlockImpl(version, timestamp, previousBlock, totalAmountNQT, totalFeeNQT, payloadLength, payloadHash, generatorPublicKey,
+            BlockImpl block = new BlockImpl(version, timestamp, previousBlock, totalAmountNQT, totalFeeNQT, totalInterestNQT, payloadLength, payloadHash, generatorPublicKey,
                     generationSignature, blockSignature, previousBlockHash, blockTransactions);
             if (!block.checkSignature()) {
                 throw new NxtException.NotValidException("Invalid block signature");
@@ -300,7 +310,7 @@ final class BlockImpl implements Block {
 
     byte[] bytes() {
         if (bytes == null) {
-            ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + 8 + 4 + 8 + 8 + 4 + 32 + 32 + 32 + 32 + (blockSignature != null ? 64 : 0));
+            ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + 8 + 4 + 8 + 8 + 8 + 4 + 32 + 32 + 32 + 32 + (blockSignature != null ? 64 : 0));
             buffer.order(ByteOrder.LITTLE_ENDIAN);
             buffer.putInt(version);
             buffer.putInt(timestamp);
@@ -308,6 +318,7 @@ final class BlockImpl implements Block {
             buffer.putInt(getTransactions().size());
             buffer.putLong(totalAmountNQT);
             buffer.putLong(totalFeeNQT);
+            buffer.putLong(totalInterestNQT);
             buffer.putInt(payloadLength);
             buffer.put(payloadHash);
             buffer.put(getGeneratorPublicKey());
@@ -341,12 +352,14 @@ final class BlockImpl implements Block {
 
             BlockImpl previousBlock = BlockchainImpl.getInstance().getBlock(getPreviousBlockId());
             if (previousBlock == null) {
+                Logger.logErrorMessage("Error verifying prev block prevBlockId="+String.valueOf(getPreviousBlockId()));
                 throw new BlockchainProcessor.BlockOutOfOrderException("Can't verify signature because previous block is missing", this);
             }
 
             Account account = Account.getAccount(getGeneratorId());
-            long effectiveBalance = account == null ? 0 : account.getEffectiveBalanceNXT();
-            if (effectiveBalance <= 0) {
+            long effectiveTrust = account == null ? 0 : account.getEffectiveTrust();
+            if (effectiveTrust <= 0) {
+                Logger.logErrorMessage("don't have effective trust");
                 return false;
             }
 
@@ -354,12 +367,13 @@ final class BlockImpl implements Block {
             digest.update(previousBlock.generationSignature);
             byte[] generationSignatureHash = digest.digest(getGeneratorPublicKey());
             if (!Arrays.equals(generationSignature, generationSignatureHash)) {
+                Logger.logErrorMessage("sig mismatch");
                 return false;
             }
 
             BigInteger hit = new BigInteger(1, new byte[]{generationSignatureHash[7], generationSignatureHash[6], generationSignatureHash[5], generationSignatureHash[4], generationSignatureHash[3], generationSignatureHash[2], generationSignatureHash[1], generationSignatureHash[0]});
 
-            return Generator.verifyHit(hit, BigInteger.valueOf(effectiveBalance), previousBlock, timestamp);
+            return Generator.verifyHit(hit, BigInteger.valueOf(effectiveTrust), previousBlock, timestamp);
 
         } catch (RuntimeException e) {
 
@@ -390,14 +404,16 @@ final class BlockImpl implements Block {
                 Account previousGeneratorAccount = Account.getAccount(BlockDb.findBlockAtHeight(this.height - i - 1).getGeneratorId());
                 Logger.logDebugMessage("Back fees %f %s to forger at height %d", ((double)backFees[i])/Constants.ONE_NXT, Constants.COIN_SYMBOL, this.height - i - 1);
                 previousGeneratorAccount.addToBalanceAndUnconfirmedBalanceNQT(LedgerEvent.BLOCK_GENERATED, getId(), backFees[i]);
-                previousGeneratorAccount.addToForgedBalanceNQT(backFees[i]);
+                previousGeneratorAccount.addToForgedBalanceNQT(backFees[i], 0);
             }
         }
         if (totalBackFees != 0) {
             Logger.logDebugMessage("Fee reduced by %f %s at height %d", ((double)totalBackFees)/Constants.ONE_NXT, Constants.COIN_SYMBOL, this.height);
         }
-        generatorAccount.addToBalanceAndUnconfirmedBalanceNQT(LedgerEvent.BLOCK_GENERATED, getId(), totalFeeNQT - totalBackFees);
-        generatorAccount.addToForgedBalanceNQT(totalFeeNQT - totalBackFees);
+        Logger.logDebugMessage("apply: addToBalanceAndUnconfirmedBalanceNQT id = " + LedgerEvent.BLOCK_GENERATED, getId() + " totalInterestNQT = " + totalInterestNQT);
+        generatorAccount.addToBalanceAndUnconfirmedBalanceNQT(LedgerEvent.BLOCK_GENERATED, getId(), totalFeeNQT - totalBackFees + totalInterestNQT);
+        Logger.logDebugMessage("apply: addToForgedBalanceNQT totalInterestNQT = " + totalInterestNQT);
+        generatorAccount.addToForgedBalanceNQT(totalFeeNQT - totalBackFees, totalInterestNQT);
     }
 
     void setPrevious(BlockImpl block) {
@@ -428,6 +444,7 @@ final class BlockImpl implements Block {
     private void calculateBaseTarget(BlockImpl previousBlock) {
         long prevBaseTarget = previousBlock.baseTarget;
         int blockchainHeight = previousBlock.height;
+        Logger.logDebugMessage("blockIml:calculateBaseTarget data: previouse block targer=" + previousBlock.baseTarget + " blockchain height=" + blockchainHeight);
         if (blockchainHeight > 2 && blockchainHeight % 2 == 0) {
             BlockImpl block = BlockDb.findBlockAtHeight(blockchainHeight - 2);
             int blocktimeAverage = (this.timestamp - block.timestamp) / 3;

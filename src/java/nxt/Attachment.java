@@ -129,6 +129,24 @@ public interface Attachment extends Appendix {
         }
 
     };
+    
+    EmptyAttachment SEND_LOAN = new EmptyAttachment() {
+
+        @Override
+        public TransactionType getTransactionType() {
+            return TransactionType.Loan.SEND_LOAN;
+        }
+
+    };
+
+    EmptyAttachment SEND_PAY_BACK_LOAN = new EmptyAttachment() {
+
+        @Override
+        public TransactionType getTransactionType() {
+            return TransactionType.Loan.SEND_PAY_BACK_LOAN;
+        }
+
+    };
 
     // the message payload is in the Appendix
     EmptyAttachment ARBITRARY_MESSAGE = new EmptyAttachment() {
@@ -1900,6 +1918,129 @@ public interface Attachment extends Appendix {
             return period;
         }
     }
+    
+    class Loan extends AbstractAttachment {
+
+        private final int period;
+        private final long loanAmount;
+        private final long loanInterest;
+
+        Loan(ByteBuffer buffer) {
+            super(buffer);
+            this.period = buffer.getInt();
+            this.loanAmount = buffer.getLong();
+            this.loanInterest = buffer.getLong();
+        }
+
+        Loan(JSONObject attachmentData) {
+            super(attachmentData);
+            this.period = ((Long) attachmentData.get("period")).intValue();
+            this.loanAmount = ((Long) attachmentData.get("loanAmount")).longValue();
+            this.loanInterest = ((Long) attachmentData.get("loanInterest")).longValue();
+        }
+
+        public Loan(int period, long loanAmount, long loanInterest) {
+            this.period = period;
+            this.loanAmount = loanAmount;
+            this.loanInterest = loanInterest;
+        }
+
+        @Override
+        int getMySize() {
+            return (Integer.SIZE / 8) + (Long.SIZE / 8) + (Long.SIZE / 8); //TODO Check if this is the expected result of this function
+        }
+
+        @Override
+        void putMyBytes(ByteBuffer buffer) {
+        	buffer.putInt(period);
+            buffer.putLong(loanAmount);
+            buffer.putLong(loanInterest);
+        }
+
+        @Override
+        void putMyJSON(JSONObject attachment) {
+            attachment.put("period", period);
+            attachment.put("loanAmount", loanAmount);
+            attachment.put("loanInterest", loanInterest);
+        }
+
+        @Override
+        public TransactionType getTransactionType() {
+            return TransactionType.Loan.SEND_LOAN;
+        }
+
+        public int getPeriod() {
+            return period;
+        }
+        public long getLoanAmount() {
+            return loanAmount;
+        }
+        public long getLoanInterest() {
+            return loanInterest;
+        }
+
+    }
+
+    class PayBackLoan extends AbstractAttachment {
+
+        private final long loanId;
+        private final long payBackLoanAmount;
+        private final long payBackLoanFee;
+
+        PayBackLoan(ByteBuffer buffer) {
+            super(buffer);
+            this.loanId = buffer.getLong();
+            this.payBackLoanAmount = buffer.getLong();
+            this.payBackLoanFee = buffer.getLong();
+        }
+
+        PayBackLoan(JSONObject attachmentData) {
+            super(attachmentData);
+            this.loanId = ((Long) attachmentData.get("loanId")).longValue();
+            this.payBackLoanAmount = ((Long) attachmentData.get("payBackLoanAmount")).longValue();
+            this.payBackLoanFee = ((Long) attachmentData.get("payBackLoanFee")).longValue();
+        }
+
+        public PayBackLoan(long loanId, long payBackLoanAmount, long payBackLoanFee) {
+            this.loanId = loanId;
+            this.payBackLoanAmount = payBackLoanAmount;
+            this.payBackLoanFee = payBackLoanFee;
+        }
+
+        @Override
+        int getMySize() { return (Long.SIZE / 8) + (Long.SIZE / 8) + (Long.SIZE / 8); }
+
+        @Override
+        void putMyBytes(ByteBuffer buffer) {
+            buffer.putLong(loanId);
+            buffer.putLong(payBackLoanAmount);
+            buffer.putLong(payBackLoanFee);
+        }
+
+        @Override
+        void putMyJSON(JSONObject attachment) {
+            attachment.put("loanId", loanId);
+            attachment.put("payBackLoanAmount", payBackLoanAmount);
+            attachment.put("payBackLoanFee", payBackLoanFee);
+        }
+
+        @Override
+        public TransactionType getTransactionType() {
+            return TransactionType.Loan.SEND_PAY_BACK_LOAN;
+        }
+
+        public long getLoanId() {
+            return loanId;
+        }
+
+        public long getPayBackLoanAmount() {
+            return payBackLoanAmount;
+        }
+
+        public long getPayBackLoanFee() { return payBackLoanFee; }
+
+    }
+    
 
     interface MonetarySystemAttachment {
 

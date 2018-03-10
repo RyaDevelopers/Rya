@@ -11,7 +11,7 @@ var NRS = (function(NRS, $, undefined) {
     $("#loan_duration").on("change", function() {
 		if (this.value > NRS.constants.MAX_UNSIGNED_SHORT_JAVA) {
 			$("#lease_balance_help").html($.t("loan_duration_minimal_value", {
-                "minLoanDuration": 1 // TODO ori: change by const
+                "minLoanDuration": 1 // TODO: change by const
             }));
 		} else {
             setLoanPeriodHelp(this.value);

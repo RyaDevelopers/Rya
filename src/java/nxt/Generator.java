@@ -93,7 +93,7 @@ public final class Generator implements Comparable<Generator> {
                             List<Generator> forgers = new ArrayList<>();
                             for (Generator generator : generators.values()) {
                                 generator.setLastBlock(lastBlock);
-                                if (generator.effectiveBalance.signum() > 0) {
+                                if (generator.effectiveTrust.signum() > 0) {
                                     forgers.add(generator);
                                 }
                             }
@@ -112,6 +112,10 @@ public final class Generator implements Comparable<Generator> {
                         }
                         for (Generator generator : sortedForgers) {
                             if (generator.getHitTime() > generationLimit || generator.forge(lastBlock, generationLimit)) {
+                            	if (generationLimit % 30 == 0) {
+                            		Logger.logDebugMessage("Generator:run hit time = " + generator.getHitTime() + " generation limit = " + generationLimit + " first condition = " + (generator.getHitTime() > generationLimit ));	
+                            	}
+                            	
                                 return;
                             }
                         }
@@ -232,14 +236,26 @@ public final class Generator implements Comparable<Generator> {
         Generator.delayTime = delay;
     }
 
-    static boolean verifyHit(BigInteger hit, BigInteger effectiveBalance, Block previousBlock, int timestamp) {
+    static boolean verifyHit(BigInteger hit, BigInteger effectiveTrust, Block previousBlock, int timestamp) {
         int elapsedTime = timestamp - previousBlock.getTimestamp();
         if (elapsedTime <= 0) {
             return false;
         }
-        BigInteger effectiveBaseTarget = BigInteger.valueOf(previousBlock.getBaseTarget()).multiply(effectiveBalance);
+
+
+        BigInteger effectiveBaseTarget = BigInteger.valueOf(previousBlock.getBaseTarget()).multiply(effectiveTrust);
         BigInteger prevTarget = effectiveBaseTarget.multiply(BigInteger.valueOf(elapsedTime - 1));
         BigInteger target = prevTarget.add(effectiveBaseTarget);
+        Logger.logDebugMessage("hit.compareTo(target)="+String.valueOf(hit.compareTo(target)));
+        Logger.logDebugMessage("hit.compareTo(prevTarget)="+String.valueOf(hit.compareTo(prevTarget)));
+        Logger.logDebugMessage("hit="+String.valueOf(hit));
+        Logger.logDebugMessage("target="+String.valueOf(target));
+        Logger.logDebugMessage("prevTarget="+String.valueOf(prevTarget));
+        Logger.logDebugMessage("effectiveBaseTarget="+String.valueOf(effectiveBaseTarget));
+        Logger.logDebugMessage("previousBlock.getBaseTarget()="+String.valueOf(previousBlock.getBaseTarget()));
+        Logger.logDebugMessage("elapsedTime="+String.valueOf(elapsedTime));
+        Logger.logDebugMessage("is_offline="+String.valueOf(Constants.isOffline));
+
         return hit.compareTo(target) < 0
                 && (hit.compareTo(prevTarget) >= 0
                 || (Constants.isTestnet ? elapsedTime > 300 : elapsedTime > 3600)
@@ -260,9 +276,10 @@ public final class Generator implements Comparable<Generator> {
         return new BigInteger(1, new byte[] {generationSignatureHash[7], generationSignatureHash[6], generationSignatureHash[5], generationSignatureHash[4], generationSignatureHash[3], generationSignatureHash[2], generationSignatureHash[1], generationSignatureHash[0]});
     }
 
-    static long getHitTime(BigInteger effectiveBalance, BigInteger hit, Block block) {
+    static long getHitTime(BigInteger effectiveTrust, BigInteger hit, Block block) {
+    	Logger.logDebugMessage("Generator:getHitTime data: baseTarhet=" + block.getBaseTarget() + " effectiveTrust=" + effectiveTrust);
         return block.getTimestamp()
-                + hit.divide(BigInteger.valueOf(block.getBaseTarget()).multiply(effectiveBalance)).longValue();
+                + hit.divide(BigInteger.valueOf(block.getBaseTarget()).multiply(effectiveTrust)).longValue();
     }
 
 
@@ -271,7 +288,7 @@ public final class Generator implements Comparable<Generator> {
     private final byte[] publicKey;
     private volatile long hitTime;
     private volatile BigInteger hit;
-    private volatile BigInteger effectiveBalance;
+    private volatile BigInteger effectiveTrust;
     private volatile long deadline;
 
     private Generator(String secretPhrase) {
@@ -307,7 +324,7 @@ public final class Generator implements Comparable<Generator> {
 
     @Override
     public int compareTo(Generator g) {
-        int i = this.hit.multiply(g.effectiveBalance).compareTo(g.hit.multiply(this.effectiveBalance));
+        int i = this.hit.multiply(g.effectiveTrust).compareTo(g.hit.multiply(this.effectiveTrust));
         if (i != 0) {
             return i;
         }
@@ -323,43 +340,51 @@ public final class Generator implements Comparable<Generator> {
         int height = lastBlock.getHeight();
         Account account = Account.getAccount(accountId, height);
         if (account == null) {
-            effectiveBalance = BigInteger.ZERO;
+            effectiveTrust = BigInteger.ZERO;
         } else {
-            effectiveBalance = BigInteger.valueOf(Math.max(account.getEffectiveBalanceNXT(height), 0));
+            effectiveTrust = BigInteger.valueOf(Math.max(account.getEffectiveTrust(height), 0));
         }
-        if (effectiveBalance.signum() == 0) {
+        if (effectiveTrust.signum() == 0) {
             hitTime = 0;
             hit = BigInteger.ZERO;
             return;
         }
         hit = getHit(publicKey, lastBlock);
-        hitTime = getHitTime(effectiveBalance, hit, lastBlock);
+        hitTime = getHitTime(effectiveTrust, hit, lastBlock);
         deadline = Math.max(hitTime - lastBlock.getTimestamp(), 0);
         listeners.notify(this, Event.GENERATION_DEADLINE);
     }
 
     boolean forge(Block lastBlock, int generationLimit) throws BlockchainProcessor.BlockNotAcceptedException {
+    	
         int timestamp = getTimestamp(generationLimit);
-        if (!verifyHit(hit, effectiveBalance, lastBlock, timestamp)) {
+        Logger.logDebugMessage("Generator:forge Start forge " + this.toString() + " forge at " + String.valueOf(timestamp)     + " height " + lastBlock.getHeight() + " last timestamp " + lastBlock.getTimestamp());
+        if (!verifyHit(hit, effectiveTrust, lastBlock, timestamp)) {
             Logger.logDebugMessage(this.toString() + " failed to forge at " + timestamp + " height " + lastBlock.getHeight() + " last timestamp " + lastBlock.getTimestamp());
             return false;
         }
         int start = Nxt.getEpochTime();
         while (true) {
             try {
+            	Logger.logDebugMessage("Generator:forge in while loop");
                 BlockchainProcessorImpl.getInstance().generateBlock(secretPhrase, timestamp);
                 setDelay(Constants.FORGING_DELAY);
+                Logger.logDebugMessage("Generator:forge finished forging");
                 return true;
             } catch (BlockchainProcessor.TransactionNotAcceptedException e) {
-                // the bad transaction has been expunged, try again
+            	Logger.logDebugMessage("Generator:forge in catch clause");
+            	// the bad transaction has been expunged, try again
                 if (Nxt.getEpochTime() - start > 10) { // give up after trying for 10 s
+                	Logger.logDebugMessage("Generator:forge failed to forge"  + e.getMessage());
                     throw e;
                 }
+                Logger.logDebugMessage("Generator:forge ignoring exception " + e.getMessage());
             }
         }
     }
 
     private int getTimestamp(int generationLimit) {
+        Logger.logDebugMessage("getTimeStamp generationLimit=" + String.valueOf(generationLimit) + " hittime=" + String.valueOf(hitTime));
         return (generationLimit - hitTime > 3600) ? generationLimit : (int)hitTime + 1;
     }
 
@@ -420,7 +445,7 @@ public final class Generator implements Comparable<Generator> {
     public static class ActiveGenerator implements Comparable<ActiveGenerator> {
         private final long accountId;
         private long hitTime;
-        private long effectiveBalanceNXT;
+        private long activeEffectiveTrust;
         private byte[] publicKey;
 
         public ActiveGenerator(long accountId) {
@@ -432,8 +457,8 @@ public final class Generator implements Comparable<Generator> {
             return accountId;
         }
 
-        public long getEffectiveBalance() {
-            return effectiveBalanceNXT;
+        public long getEffectiveTrust() {
+            return activeEffectiveTrust;
         }
 
         public long getHitTime() {
@@ -454,14 +479,14 @@ public final class Generator implements Comparable<Generator> {
                 hitTime = Long.MAX_VALUE;
                 return;
             }
-            effectiveBalanceNXT = Math.max(account.getEffectiveBalanceNXT(height), 0);
-            if (effectiveBalanceNXT == 0) {
+            activeEffectiveTrust = Math.max(account.getEffectiveTrust(height), 0);
+            if (activeEffectiveTrust == 0) {
                 hitTime = Long.MAX_VALUE;
                 return;
             }
-            BigInteger effectiveBalance = BigInteger.valueOf(effectiveBalanceNXT);
+            BigInteger effectiveTrust = BigInteger.valueOf(activeEffectiveTrust);
             BigInteger hit = Generator.getHit(publicKey, lastBlock);
-            hitTime = Generator.getHitTime(effectiveBalance, hit, lastBlock);
+            hitTime = Generator.getHitTime(effectiveTrust, hit, lastBlock);
         }
 
         @Override

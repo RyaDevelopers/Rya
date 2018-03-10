@@ -47,6 +47,8 @@ public interface Block {
 
     long getTotalFeeNQT();
 
+    long getTotalInterestNQT();
+
     int getPayloadLength();
 
     byte[] getPayloadHash();

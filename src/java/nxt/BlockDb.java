@@ -228,6 +228,7 @@ final class BlockDb {
             long previousBlockId = rs.getLong("previous_block_id");
             long totalAmountNQT = rs.getLong("total_amount");
             long totalFeeNQT = rs.getLong("total_fee");
+            long totalInterestNQT = rs.getLong("total_interest");
             int payloadLength = rs.getInt("payload_length");
             long generatorId = rs.getLong("generator_id");
             byte[] previousBlockHash = rs.getBytes("previous_block_hash");
@@ -242,7 +243,7 @@ final class BlockDb {
             byte[] blockSignature = rs.getBytes("block_signature");
             byte[] payloadHash = rs.getBytes("payload_hash");
             long id = rs.getLong("id");
-            return new BlockImpl(version, timestamp, previousBlockId, totalAmountNQT, totalFeeNQT, payloadLength, payloadHash,
+            return new BlockImpl(version, timestamp, previousBlockId, totalAmountNQT, totalFeeNQT, totalInterestNQT, payloadLength, payloadHash,
                     generatorId, generationSignature, blockSignature, previousBlockHash,
                     cumulativeDifficulty, baseTarget, nextBlockId, height, id, loadTransactions ? TransactionDb.findBlockTransactions(con, id) : null);
         } catch (SQLException e) {
@@ -253,9 +254,9 @@ final class BlockDb {
     static void saveBlock(Connection con, BlockImpl block) {
         try {
             try (PreparedStatement pstmt = con.prepareStatement("INSERT INTO block (id, version, timestamp, previous_block_id, "
-                    + "total_amount, total_fee, payload_length, previous_block_hash, next_block_id, cumulative_difficulty, "
+                    + "total_amount, total_fee, total_interest, payload_length, previous_block_hash, next_block_id, cumulative_difficulty, "
                     + "base_target, height, generation_signature, block_signature, payload_hash, generator_id) "
-                    + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                    + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
                 int i = 0;
                 pstmt.setLong(++i, block.getId());
                 pstmt.setInt(++i, block.getVersion());
@@ -263,6 +264,7 @@ final class BlockDb {
                 DbUtils.setLongZeroToNull(pstmt, ++i, block.getPreviousBlockId());
                 pstmt.setLong(++i, block.getTotalAmountNQT());
                 pstmt.setLong(++i, block.getTotalFeeNQT());
+                pstmt.setLong(++i, block.getTotalInterestNQT());
                 pstmt.setInt(++i, block.getPayloadLength());
                 pstmt.setBytes(++i, block.getPreviousBlockHash());
                 pstmt.setLong(++i, 0L); // next_block_id set to 0 at first

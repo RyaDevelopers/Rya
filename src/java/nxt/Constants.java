@@ -25,19 +25,26 @@ public final class Constants {
     public static final boolean isLightClient = Nxt.getBooleanProperty("nxt.isLightClient");
     public static final String customLoginWarning = Nxt.getStringProperty("nxt.customLoginWarning", null, false, "UTF-8");
 
-    public static final String COIN_SYMBOL = "NxtCloneCoin";
-    public static final String ACCOUNT_PREFIX = "NXT";
-    public static final String PROJECT_NAME = "NxtClone";
+    public static final String COIN_SYMBOL = "RYO";
+    public static final String ACCOUNT_PREFIX = "RYO";
+    public static final String PROJECT_NAME = "RYO";
     public static final int MAX_NUMBER_OF_TRANSACTIONS = Nxt.getIntProperty("nxt.maxNumberOfTransactions", 255);
     public static final int MIN_TRANSACTION_SIZE = 176;
     public static final int MAX_PAYLOAD_LENGTH = MAX_NUMBER_OF_TRANSACTIONS * MIN_TRANSACTION_SIZE;
-    public static final long MAX_BALANCE_NXT = 1000000000;
     public static final long ONE_NXT = 100000000;
-    public static final long MAX_BALANCE_NQT = MAX_BALANCE_NXT * ONE_NXT;
-
+    public static final long MAX_BALANCE_NQT = Long.MAX_VALUE;
+    public static final long MAX_BALANCE_NXT = MAX_BALANCE_NQT / ONE_NXT;
+    public static final long ONE_TRUST = 100000000;
+    public static final long MAX_BALANCE_NXT_FOR_FORGING = isTestnet ? 700000 : 100000000;
+    //public static final long MAX_TRUST_FOR_FORGING = Account.getTotalTrust() / ONE_TRUST;
     public static final int BLOCK_TIME = 60;
-    public static final long INITIAL_BASE_TARGET = BigInteger.valueOf(2).pow(63).divide(BigInteger.valueOf(BLOCK_TIME * MAX_BALANCE_NXT)).longValue(); //153722867;
-    public static final long MAX_BASE_TARGET = INITIAL_BASE_TARGET * (isTestnet ? MAX_BALANCE_NXT : 50);
+    public static final long MAX_TRUST = isTestnet ? 1000000 : 10000000;
+    public static final long GENESIS_TRUST = 10000000;
+    public static final long MAX_TRUST_Q = MAX_BALANCE_NXT * ONE_TRUST;
+    public static final long INITIAL_BASE_TARGET = BigInteger.valueOf(2).pow(63).divide(BigInteger.valueOf(BLOCK_TIME * MAX_TRUST)).longValue(); //153722867;
+    public static final long MAX_BASE_TARGET = INITIAL_BASE_TARGET * (isTestnet ? 10000000 : 50);
+    public static final long INITIAL_COIN_TO_TRUST_RATIO = 10;
+
     public static final long MIN_BASE_TARGET = INITIAL_BASE_TARGET * 9 / 10;
     public static final int MIN_BLOCKTIME_LIMIT = BLOCK_TIME - 7;
     public static final int MAX_BLOCKTIME_LIMIT = BLOCK_TIME + 7;
@@ -59,6 +66,8 @@ public final class Constants {
 
     public static final int MAX_ALIAS_URI_LENGTH = 1000;
     public static final int MAX_ALIAS_LENGTH = 100;
+    
+    public static final int MAX_LOAN_DURATION = Integer.MAX_VALUE;
 
     public static final int MAX_ARBITRARY_MESSAGE_LENGTH = 160;
     public static final int MAX_ENCRYPTED_MESSAGE_LENGTH = 160 + 16;
