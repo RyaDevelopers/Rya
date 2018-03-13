@@ -511,7 +511,7 @@ public final class Account {
         private void save(Connection con) throws SQLException {
             try (PreparedStatement pstmt = con.prepareStatement("MERGE INTO account_trust "
                     + "(ACCOUNT_ID , UNITS , UNCONFIRMED_UNITS , HEIGHT ,LATEST) "
-                    + "KEY (account_id) VALUES (?, ?, ?, ?, TRUE)")) { //TODO, change to (account_id,height)
+                    + "KEY (account_id,height) VALUES (?, ?, ?, ?, TRUE)")) {
             int i = 0;
             pstmt.setLong(++i, this.accountId);
             pstmt.setLong(++i, this.units);
