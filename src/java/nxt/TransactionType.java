@@ -373,7 +373,7 @@ public abstract class TransactionType {
 			BigInteger totalBalance = BigInteger.valueOf(Account.getTotalBalanceNQT());
             BigInteger amount_nqt_big = BigInteger.valueOf(amount_nqt);
             long res;
-			if(totalBalance == 0)
+			if(totalBalance == BigInteger.valueOf(0))
             {
                 res = 1;
             }
