@@ -371,8 +371,15 @@ public abstract class TransactionType {
 
 			BigInteger totalTrust = BigInteger.valueOf(Account.getTotalTrust());
 			BigInteger totalBalance = BigInteger.valueOf(Account.getTotalBalanceNQT());
-			BigInteger amount_nqt_big = BigInteger.valueOf(amount_nqt);
-			long res = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
+            BigInteger amount_nqt_big = BigInteger.valueOf(amount_nqt);
+            long res;
+			if(totalBalance == 0)
+            {
+                res = 1;
+            }
+            else {
+                res = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
+            }
 
 			Logger.logDebugMessage("getTrustNeededForLoan res=" +
 					String.valueOf(res)+ " total_trust="
