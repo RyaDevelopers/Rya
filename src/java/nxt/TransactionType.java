@@ -460,10 +460,10 @@ public abstract class TransactionType {
                 Logger.logDebugMessage("TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
                 Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
                 try {
+                    senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
                     AccountLoan.AddToLoan(transaction.getSenderId(), transaction.getHeight(), attachment.getPeriod(),
                     		transaction.getAmountNQT(), attachment.getLoanInterest(), transaction.getRecipientId(),
                             transaction.getId());
-                    senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
                     Logger.logDebugMessage("TransactionType:SEND_LOAN added loan to DB. transactionId="
                             + transaction.getId() + ", amount=" + attachment.getLoanAmount());
                 } catch (Exception e) {
