@@ -2235,7 +2235,7 @@ public final class Account {
     public static long getTotalTrust(){
         long total = 0;
         try (Connection con = Db.db.getConnection()){
-            PreparedStatement pstmtSelect = con.prepareStatement("SELECT sum(UNITS) total FROM account_trust where latest=TRUE and BALANCE > 0");
+            PreparedStatement pstmtSelect = con.prepareStatement("SELECT sum(UNITS) total FROM account_trust where latest=TRUE and UNITS > 0");
            try (ResultSet rs = pstmtSelect.executeQuery()) {
                 if (rs.next()) {
                     total = (rs.getLong("total"));
