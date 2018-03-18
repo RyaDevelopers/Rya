@@ -405,7 +405,7 @@ public abstract class TransactionType {
 			if (getSubtype() == TransactionType.SUBTYPE_LOAN_GIVE_LOAN) {
 				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
 				Logger.logDebugMessage("undoAttachmentUnconfirmed LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
-				senderAccount.addToTrustBalance(0, -getTrustNeededForLoan(attachment.getLoanAmount()));
+                senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
 			} else {
 				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
 				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
@@ -460,10 +460,10 @@ public abstract class TransactionType {
                 Logger.logDebugMessage("TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
                 Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
                 try {
+                    senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
                     AccountLoan.AddToLoan(transaction.getSenderId(), (long)transaction.getHeight(), (long)attachment.getPeriod(), //TODO better casting?
                     		transaction.getAmountNQT(), attachment.getLoanInterest(), transaction.getRecipientId(),
                             transaction.getId());
-                    senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
                     Logger.logDebugMessage("TransactionType:SEND_LOAN added loan to DB. transactionId="
                             + transaction.getId() + ", amount=" + attachment.getLoanAmount());
                 } catch (Exception e) {
