@@ -669,11 +669,8 @@ class NxtDbVersion extends DbVersion {
             			+ "loan_height_from BIGINT NOT NULL, loan_blocks_duration BIGINT NOT NULL, height INT NOT NULL, "
                         + "giving_loan_transaction_id BIGINT, returning_loan_transaction_id BIGINT,  "
                         + "latest BOOLEAN NOT NULL DEFAULT TRUE)");
+//TODO: Remove latest? add index?
             case 240:
-                apply("CREATE UNIQUE INDEX IF NOT EXISTS account_loan_loaner_id_height_idx ON account_loan (loaner_id, height DESC)");
-            case 241:
-                apply("CREATE INDEX IF NOT EXISTS account_loan_loan_getter_id_height_idx ON account_loan (loan_getter_id, height DESC)");
-            case 242:
                 return;
             default:
                 throw new RuntimeException("Blockchain database inconsistent with code, at update " + nextUpdate
