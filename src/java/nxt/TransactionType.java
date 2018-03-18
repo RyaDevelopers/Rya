@@ -460,7 +460,7 @@ public abstract class TransactionType {
                 Logger.logDebugMessage("TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
                 Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
                 try {
-                    AccountLoan.AddToLoan(transaction.getSenderId(), transaction.getHeight(), attachment.getPeriod(),
+                    AccountLoan.AddToLoan(transaction.getSenderId(), (long)transaction.getHeight(), (long)attachment.getPeriod(), //TODO better casting?
                     		transaction.getAmountNQT(), attachment.getLoanInterest(), transaction.getRecipientId(),
                             transaction.getId());
                     senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);

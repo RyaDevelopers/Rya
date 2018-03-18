@@ -285,7 +285,7 @@ public final class Account {
         private AccountLoan(long loanerId,
                              long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, long giveLoanTransactionId) {
             this.loanerId = loanerId;
-            this.dbKey = accountLoanDbKeyFactory.newKey(this.getLoanerId()); //TODO investigate is this means only one loan per loaner??
+            this.dbKey = accountLoanDbKeyFactory.newKey(giveLoanTransactionId);
             this.setLonHeightFrom(loanHeightFrom);
             this.setLoanBlocksDuration(loanBlocksDuration);
             this.setLoanAmount(loanAmount);
@@ -309,10 +309,38 @@ public final class Account {
         }
         
         public static boolean AddToLoan(long loanerId,
-                long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, long giveLoanTransactionId) {
-        	AccountLoan newLoan = new AccountLoan(loanerId, loanHeightFrom, loanBlocksDuration, loanAmount, loanInterest, loanGetterId, giveLoanTransactionId);
-        	accountLoanTable.insert(newLoan);
+                long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, 
+                long giveLoanTransactionId) {
         	
+        	if (loanAmount <= 0) { // Don't save empty loan
+                return false;
+            }
+        	
+            int blockchainHeight = Nxt.getBlockchain().getHeight();
+            
+            try (Connection con = Db.db.getConnection(); 
+            		PreparedStatement pstmtInsert = con.prepareStatement("INSERT INTO ACCOUNT_LOAN "
+            				+" (LOAN_GETTER_ID,LOANER_ID,LOAN_AMOUNT,LOAN_INTEREST,LOAN_HEIGHT_FROM,LOAN_BLOCKS_DURATION,HEIGHT,"
+            				+" GIVING_LOAN_TRANSACTION_ID,RETURNING_LOAN_TRANSACTION_ID,LATEST)" 
+            				+" VALUES(?,?,?,?,?,?,?,?,null,true)")) { // TODO: Should it always be latest? Should we keep this column?
+            	int i = 0;
+            	pstmtInsert.setLong(++i, loanGetterId);
+            	pstmtInsert.setLong(++i, loanerId);
+            	pstmtInsert.setLong(++i, loanAmount);
+            	pstmtInsert.setLong(++i, loanInterest);
+            	pstmtInsert.setLong(++i, loanHeightFrom);
+            	pstmtInsert.setLong(++i, loanBlocksDuration);
+            	pstmtInsert.setLong(++i, blockchainHeight); // TODO: Is it always as loanHeightFrom???
+            	pstmtInsert.setLong(++i, giveLoanTransactionId);
+            	int rowsAffected = pstmtInsert.executeUpdate();
+            	if (rowsAffected != 1) {
+                    Logger.logDebugMessage("Account:AddToLoan - Insert loan sql returned " + rowsAffected + " rows affected. It should be 1");
+
+            	}
+            } catch (SQLException e) {
+            	Logger.logDebugMessage("Failed to insert loan to DB: " + e.getMessage()); 
+            	throw new RuntimeException(e.toString(), e);
+            }
         	return true;
         }
 
