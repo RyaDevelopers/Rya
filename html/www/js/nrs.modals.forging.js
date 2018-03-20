@@ -77,16 +77,16 @@ var NRS = (function(NRS, $) {
 			$.growl($.t("error_forging_no_public_key"), {
 				"type": "danger"
 			});
-		} else if (NRS.accountInfo.effectiveBalanceNXT == 0) {
-			if (NRS.lastBlockHeight >= NRS.accountInfo.currentLeasingHeightFrom && NRS.lastBlockHeight <= NRS.accountInfo.currentLeasingHeightTo) {
-				$.growl($.t("error_forging_lease"), {
-					"type": "danger"
-				});
-			} else {
-				$.growl($.t("error_forging_effective_balance"), {
-					"type": "danger"
-				});
-			}
+		//} else if (NRS.accountInfo.effectiveBalanceNXT == 0) {
+		//	if (NRS.lastBlockHeight >= NRS.accountInfo.currentLeasingHeightFrom && NRS.lastBlockHeight <= NRS.accountInfo.currentLeasingHeightTo) {
+		//		$.growl($.t("error_forging_lease"), {
+		//			"type": "danger"
+		//		});
+		//	} else {
+		//		$.growl($.t("error_forging_effective_balance"), {
+		//			"type": "danger"
+		//		});
+		//	}
 		} else if (NRS.isAccountForging) {
 			$("#stop_forging_modal").modal("show");
 		} else {
