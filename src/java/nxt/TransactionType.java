@@ -613,10 +613,10 @@ public abstract class TransactionType {
 				long feeNxt = attachment.getPayBackLoanFee();
 				long interestNxt = accountLoan.getLoanInterest();
 				if (attachment.getPayBackLoanAmount() != accountLoan.getLoanAmount() + interestNxt) {
-					throw new NxtException.NotValidException("Invalid pay back loan: pay back amount (" + attachment.getPayBackLoanAmount() + ")" +
-							"doesn't match loan amount (" + accountLoan.getLoanAmount() + ")" +
-							" + pay back loan fee (" + feeNxt + ")," +
-							" + pay back loan interest (" + interestNxt + "), please pay: " + ((long)(accountLoan.getLoanAmount() + interestNxt)));
+					throw new NxtException.NotValidException("Invalid pay back loan: pay back amount (" + attachment.getPayBackLoanAmount() / Constants.ONE_NXT + ")" +
+							"doesn't match loan amount (" + accountLoan.getLoanAmount() / Constants.ONE_NXT + ")" +
+							" + pay back loan fee (" + feeNxt / Constants.ONE_NXT + ")," +
+							" + pay back loan interest (" + interestNxt / Constants.ONE_NXT + "), please pay: " + ((long)(accountLoan.getLoanAmount() + interestNxt)) / Constants.ONE_NXT);
 				}
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment validation succeed!");
 			}
