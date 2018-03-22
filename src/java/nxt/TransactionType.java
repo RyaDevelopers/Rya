@@ -588,7 +588,7 @@ public abstract class TransactionType {
 
 			@Override
 			void validateAttachment(Transaction transaction) throws NxtException.ValidationException {
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN validating transaction " + transaction.getId());
+				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN validating attachment");
 				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment loadId = " +  attachment.getLoanId());
 				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
@@ -604,7 +604,6 @@ public abstract class TransactionType {
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanFee() = " + attachment.getPayBackLoanFee());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN Nxt.getBlockchain().getHeight() = " + Nxt.getBlockchain().getHeight());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getAmountNQT() = " + transaction.getAmountNQT());
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getId() = " + transaction.getId());
 
 				if(accountLoan.getReturnLoanTransactionId() != 0) {
 					throw new NxtException.NotValidException("Invalid return loan: invalid return loan id, this loan was already payed back");
