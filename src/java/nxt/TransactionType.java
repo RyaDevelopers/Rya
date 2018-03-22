@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.text.DecimalFormat;
 
 import static nxt.Constants.ONE_TRUST;
 
@@ -610,13 +611,23 @@ public abstract class TransactionType {
 				if(loanReturnBlockLimit < Nxt.getBlockchain().getHeight()) {
 					throw new NxtException.NotValidException("Invalid pay back loan: current Height is too high(" + Nxt.getBlockchain().getHeight() + ") was suppose to be payed back until Height: " + loanReturnBlockLimit);
 				}
-				long feeNxt = attachment.getPayBackLoanFee();
-				long interestNxt = accountLoan.getLoanInterest();
-				if (attachment.getPayBackLoanAmount() != accountLoan.getLoanAmount() + interestNxt) {
-					throw new NxtException.NotValidException("Invalid pay back loan: pay back amount (" + attachment.getPayBackLoanAmount() + ")" +
-							"doesn't match loan amount (" + accountLoan.getLoanAmount() + ")" +
-							" + pay back loan fee (" + feeNxt + ")," +
-							" + pay back loan interest (" + interestNxt + "), please pay: " + ((long)(accountLoan.getLoanAmount() + interestNxt)));
+                DecimalFormat format = new DecimalFormat("0.########");
+				long feeNqt = attachment.getPayBackLoanFee();
+				long interestNqt = accountLoan.getLoanInterest();
+				double proposedPayBackLoanAmount_nxt = ((double)attachment.getPayBackLoanAmount()) / ((double)Constants.ONE_NXT);
+                double neededPayBackLoanAmount_nxt = (((double)(accountLoan.getLoanAmount())) + ((double)interestNqt) + ((double)feeNqt)) / ((double)Constants.ONE_NXT);
+                double loanAmount_nxt = ((double)(accountLoan.getLoanAmount())) / ((double)Constants.ONE_NXT);
+                double interest_nxt = ((double)interestNqt) / ((double)Constants.ONE_NXT);
+                double fee_nxt = ((double)feeNqt) / ((double)Constants.ONE_NXT);
+
+                if (attachment.getPayBackLoanAmount() != accountLoan.getLoanAmount() + interestNqt + feeNqt) {
+					throw new NxtException.NotValidException(
+                        String.format("Invalid pay back loan: %s, Amount should be: %s -> Loan amount: %s + pay back loan interest: %s + pay back loan interest: %s",
+                            format.format(proposedPayBackLoanAmount_nxt),
+                            format.format(neededPayBackLoanAmount_nxt),
+                            format.format(loanAmount_nxt),
+                            format.format(interest_nxt),
+                            format.format(fee_nxt)));
 				}
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment validation succeed!");
 			}
