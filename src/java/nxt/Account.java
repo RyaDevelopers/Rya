@@ -280,7 +280,7 @@ public final class Account {
         private long loanBlocksDuration;
         private long giveLoanTransactionId;
         private long returnLoanTransactionId;
-        
+
 
         private AccountLoan(long loanerId,
                              long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, long giveLoanTransactionId) {
@@ -405,7 +405,6 @@ public final class Account {
                 pstmt.executeUpdate();
             }
         }
-
 
 		/**
 		 * @return the loanId

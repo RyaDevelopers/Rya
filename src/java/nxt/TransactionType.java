@@ -592,6 +592,10 @@ public abstract class TransactionType {
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment loadId = " +  attachment.getLoanId());
 				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
 
+                if(accountLoan == null) {
+                    throw new NxtException.NotValidException("Loan transaction " + attachment.getStringLoanId() + " was not completed yet, try again after current block is closed");
+                }
+
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getReturnLoanTransactionId() = " + accountLoan.getReturnLoanTransactionId());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanBlocksDuration() = " + accountLoan.getLoanBlocksDuration());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanAmount() = " + attachment.getPayBackLoanAmount());
@@ -601,9 +605,6 @@ public abstract class TransactionType {
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getAmountNQT() = " + transaction.getAmountNQT());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getId() = " + transaction.getId());
 
-				if(accountLoan == null) {
-					throw new NxtException.NotValidException("Invalid pay back loan: invalid loan id " + attachment.getLoanId());
-				}
 				if(accountLoan.getReturnLoanTransactionId() != 0) {
 					throw new NxtException.NotValidException("Invalid pay back loan: invalid return loan id, this loan was already payed back");
 				}
