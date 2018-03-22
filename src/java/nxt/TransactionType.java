@@ -592,8 +592,8 @@ public abstract class TransactionType {
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment loadId = " +  attachment.getLoanId());
 				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
 
-                if(accountLoan == null) {
-                    throw new NxtException.NotValidException("Loan transaction " + attachment.getStringLoanId() + " was not completed yet, try again after current block is closed");
+				if(accountLoan == null) {
+				    throw new NxtException.NotValidException("Loan transaction " + attachment.getStringLoanId() + " was not completed yet, try again after current block is closed");
                 }
 
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getReturnLoanTransactionId() = " + accountLoan.getReturnLoanTransactionId());
