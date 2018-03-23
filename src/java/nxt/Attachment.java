@@ -2033,6 +2033,11 @@ public interface Attachment extends Appendix {
             return loanId;
         }
 
+        public String getStringLoanId() {
+            return Long.toUnsignedString(loanId);
+        }
+
+
         public long getPayBackLoanAmount() {
             return payBackLoanAmount;
         }
