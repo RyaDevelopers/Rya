@@ -10,7 +10,7 @@ The proof-of-trust model, first introduced by RYO, is expected to be a fuller an
 
 With Ryo you can 
 
-- Loan and Barrow money
+- Lend and Barrow money
 - View accounts calculated credit score 
 - Calculate local and global interest rates 
    
