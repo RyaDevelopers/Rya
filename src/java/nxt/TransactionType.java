@@ -583,7 +583,7 @@ public abstract class TransactionType {
                 senderAccount.addToTrustBalance(trust_gain_q/2,trust_gain_q/2);
                 recipientAccount.addToTrustBalance(getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2,
 						getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2);
-                Logger.logDebugMessage("TransactionType:SEND_LOAN update pay back to loan in DB. transactionId="+ transaction.getId() + ", loanId()=" + attachment.getLoanId());
+                Logger.logDebugMessage("TransactionType:SEND_LOAN update return loan in DB. transactionId="+ transaction.getId() + ", loanId()=" + attachment.getLoanId());
             }
 
 			@Override
@@ -607,11 +607,11 @@ public abstract class TransactionType {
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getId() = " + transaction.getId());
 
 				if(accountLoan.getReturnLoanTransactionId() != 0) {
-					throw new NxtException.NotValidException("Invalid pay back loan: invalid return loan id, this loan was already payed back");
+					throw new NxtException.NotValidException("Invalid return loan: invalid return loan id, this loan was already payed back");
 				}
 				long loanReturnBlockLimit = accountLoan.getLonHeightFrom() + accountLoan.getLoanBlocksDuration();
 				if(loanReturnBlockLimit < Nxt.getBlockchain().getHeight()) {
-					throw new NxtException.NotValidException("Invalid pay back loan: current Height is too high(" + Nxt.getBlockchain().getHeight() + ") was suppose to be payed back until Height: " + loanReturnBlockLimit);
+					throw new NxtException.NotValidException("Invalid return loan: current Height is too high(" + Nxt.getBlockchain().getHeight() + ") was suppose to be payed back until Height: " + loanReturnBlockLimit);
 				}
                 DecimalFormat format = new DecimalFormat("0.########");
 				long feeNqt = attachment.getPayBackLoanFee();
@@ -624,7 +624,7 @@ public abstract class TransactionType {
 
                 if (attachment.getPayBackLoanAmount() != accountLoan.getLoanAmount() + interestNqt) {
 					throw new NxtException.NotValidException(
-                        String.format("Invalid pay back loan: %s, Amount should be: %s -> Loan amount: %s + pay back loan interest: %s",
+                        String.format("Invalid return loan: %s, Amount should be: %s -> Loan amount: %s + return loan interest: %s",
                             format.format(proposedPayBackLoanAmount_nxt),
                             format.format(neededPayBackLoanAmount_nxt),
                             format.format(loanAmount_nxt),
