@@ -622,14 +622,13 @@ public abstract class TransactionType {
                 double interest_nxt = ((double)interestNqt) / ((double)Constants.ONE_NXT);
                 double fee_nxt = ((double)feeNqt) / ((double)Constants.ONE_NXT);
 
-                if (attachment.getPayBackLoanAmount() != accountLoan.getLoanAmount() + interestNqt + feeNqt) {
+                if (attachment.getPayBackLoanAmount() != accountLoan.getLoanAmount() + interestNqt) {
 					throw new NxtException.NotValidException(
-                        String.format("Invalid pay back loan: %s, Amount should be: %s -> Loan amount: %s + pay back loan interest: %s + pay back loan interest: %s",
+                        String.format("Invalid pay back loan: %s, Amount should be: %s -> Loan amount: %s + pay back loan interest: %s",
                             format.format(proposedPayBackLoanAmount_nxt),
                             format.format(neededPayBackLoanAmount_nxt),
                             format.format(loanAmount_nxt),
-                            format.format(interest_nxt),
-                            format.format(fee_nxt)));
+                            format.format(interest_nxt)));
 				}
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment validation succeed!");
 			}
