@@ -535,32 +535,32 @@ public abstract class TransactionType {
 				return  BlockchainProcessorImpl.trustFromCoins(1, amountNQT);
 			}
 
-			long coinsRevFromTrust(long trustQ, long fees_and_intrests_in_block) {
-				return  (fees_and_intrests_in_block * trustQ/Account.getTotalTrust());
+			long coinsRevFromTrust(long trustQ, long fees_and_intrests_in_block, long total_trust) {
+				return  (fees_and_intrests_in_block * trustQ/total_trust);
 			}
 
 
 			long lostFromCoins(long blocks, long amoutNQT, long fees_and_intrests_in_block) {
 				long total_amount = amoutNQT;
 				long total_trust = 0;
+                long trust_in_system = Account.getTotalTrust();
 				for (int i =0; i < blocks; i++) {
-					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block);
+					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block, trust_in_system);
 					total_trust += trustRevFromCoins(total_amount);
 				}
 				return total_trust;
 			}
 
-			long lostFromTrust(long blocks, long trustQ, long fees_and_intrests_in_block) {
+			    long lostFromTrust(long blocks, long trustQ, long fees_and_intrests_in_block) {
 				long total_amount = 0;
 				long total_trust = trustQ;
+                long trust_in_system = Account.getTotalTrust();
 				for (int i =0; i < blocks; i++) {
-					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block);
+					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block, trust_in_system);
 					total_trust += trustRevFromCoins(total_amount);
 				}
 				return total_trust + lostFromCoins(blocks, total_amount, fees_and_intrests_in_block);
 			}
-
-
 
 			long trustGain(long loanLenght, long loan_amount, long loan_fee, long fees_and_intrests_in_block) {
 				long trust_for_loan = getTrustNeededForLoan(loan_amount);
