@@ -17,6 +17,7 @@
 package nxt;
 
 import nxt.Account.AccountLoan;
+import nxt.Account.AccountPaybackLoan;
 import nxt.Account.ControlType;
 import nxt.AccountLedger.LedgerEvent;
 import nxt.Attachment.AbstractAttachment;
@@ -394,9 +395,7 @@ public abstract class TransactionType {
                     return true;
 				}
 			} else {
-                Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
-                AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
-                Logger.logDebugMessage("applyig return loan amount " + String.valueOf(accountLoan.getLoanAmount()));
+                Logger.logDebugMessage("applyAttachmentUnconfirmed : payback loan, do nothing");
                 return true;
 			}
 			return false;
@@ -409,9 +408,7 @@ public abstract class TransactionType {
 				Logger.logDebugMessage("undoAttachmentUnconfirmed LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
 				senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
 			} else {
-				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
-				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
-				Logger.logDebugMessage("undoAttachmentUnconfirmed return loan amount " + String.valueOf(accountLoan.getLoanAmount()));
+                Logger.logDebugMessage("undoAttachmentUnconfirmed : payback loan, do nothing");
 			}
 		}
 
@@ -571,11 +568,14 @@ public abstract class TransactionType {
 
 			@Override
             final void applyAttachment(Transaction transaction, Account senderAccount, Account recipientAccount) {
-                Logger.logDebugMessage("applyAttachment: TransactionType:Loan apply attachment");
-                Logger.logDebugMessage("applyAttachment: TransactionSubType:SUBTYPE_LOAN_RETURN_LOAN");
+                Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started");
                 Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
-                AccountLoan.PayBackLoan(attachment.getLoanId(), transaction.getId());
-				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
+                long loanId = attachment.getLoanId();
+                long paybackLoanTransactionId = transaction.getId();
+                Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
+                AccountPaybackLoan.AddToPayBackLoan(paybackLoanTransactionId, loanId);
+
+                AccountLoan accountLoan = AccountLoan.GetLoan(loanId);
 
                 long loan_len = accountLoan.getLoanBlocksDuration();
 
@@ -583,21 +583,24 @@ public abstract class TransactionType {
                 senderAccount.addToTrustBalance(trust_gain_q/2,trust_gain_q/2);
                 recipientAccount.addToTrustBalance(getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2,
 						getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2);
-                Logger.logDebugMessage("TransactionType:SEND_LOAN update return loan in DB. transactionId="+ transaction.getId() + ", loanId()=" + attachment.getLoanId());
+                Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN succeeded, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
             }
 
 			@Override
 			void validateAttachment(Transaction transaction) throws NxtException.ValidationException {
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN validating attachment");
-				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment loadId = " +  attachment.getLoanId());
+                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started");
+                Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                long loanId = attachment.getLoanId();
+                long paybackLoanTransactionId = transaction.getId();
+                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
+
+
 				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
 
 				if(accountLoan == null) {
 				    throw new NxtException.NotValidException("Loan transaction " + attachment.getStringLoanId() + " was not completed yet, try again after current block is closed");
                 }
 
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getReturnLoanTransactionId() = " + accountLoan.getReturnLoanTransactionId());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanBlocksDuration() = " + accountLoan.getLoanBlocksDuration());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanAmount() = " + attachment.getPayBackLoanAmount());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanAmount() = " + accountLoan.getLoanAmount());
@@ -605,7 +608,7 @@ public abstract class TransactionType {
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN Nxt.getBlockchain().getHeight() = " + Nxt.getBlockchain().getHeight());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getAmountNQT() = " + transaction.getAmountNQT());
 
-				if(accountLoan.getReturnLoanTransactionId() != 0) {
+				if(AccountPaybackLoan.IsLoanWasPayedBack(loanId)) {
 					throw new NxtException.NotValidException("Invalid return loan: invalid return loan id, this loan was already payed back");
 				}
 				long loanReturnBlockLimit = accountLoan.getLonHeightFrom() + accountLoan.getLoanBlocksDuration();
@@ -629,7 +632,7 @@ public abstract class TransactionType {
                             format.format(loanAmount_nxt),
                             format.format(interest_nxt)));
 				}
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment validation succeed!");
+                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN succeeded, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
 			}
 
 			public long getLoanInterest(long loanId) {

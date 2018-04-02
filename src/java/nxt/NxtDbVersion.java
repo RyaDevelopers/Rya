@@ -667,10 +667,15 @@ class NxtDbVersion extends DbVersion {
             	apply("CREATE TABLE IF NOT EXISTS account_loan (db_id IDENTITY, loan_getter_id BIGINT NOT NULL, "
                         + "loaner_id BIGINT NOT NULL, loan_amount BIGINT NOT NULL, loan_interest BIGINT NOT NULL, "
             			+ "loan_height_from BIGINT NOT NULL, loan_blocks_duration BIGINT NOT NULL, height INT NOT NULL, "
-                        + "giving_loan_transaction_id BIGINT, returning_loan_transaction_id BIGINT,  "
+                        + "giving_loan_transaction_id BIGINT, "
+                        + "latest BOOLEAN NOT NULL DEFAULT TRUE)");
+            case 240:
+                Logger.logDebugMessage("creating payback loan table");
+                apply("CREATE TABLE IF NOT EXISTS account_payback_loan (db_id IDENTITY, "
+                        + "Payback_Loan_Transaction_Id BIGINT, GIVING_LOAN_TRANSACTION_ID BIGINT, height INT NOT NULL, "
                         + "latest BOOLEAN NOT NULL DEFAULT TRUE)");
 //TODO: Remove latest? add index?
-            case 240:
+            case 241:
                 return;
             default:
                 throw new RuntimeException("Blockchain database inconsistent with code, at update " + nextUpdate

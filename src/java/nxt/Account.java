@@ -268,6 +268,98 @@ public final class Account {
         }
 
     }
+
+    public static final class AccountPaybackLoan {
+        private long paybackLoanTransactionId;
+        private long giveLoanTransactionId;
+        private final DbKey dbKey;
+
+        private AccountPaybackLoan(long paybackLoanTransactionId, long giveLoanTransactionId) {
+            this.dbKey = accountLoanDbKeyFactory.newKey(paybackLoanTransactionId);
+            this.setGiveLoanTransactionId(giveLoanTransactionId);
+            this.setPaybackLoanTransactionId(paybackLoanTransactionId);
+        }
+
+        private AccountPaybackLoan(ResultSet rs, DbKey dbKey) throws SQLException {
+            this.dbKey = dbKey;
+            this.setPaybackLoanTransactionId(rs.getLong("Payback_Loan_Transaction_Id"));
+            this.setGiveLoanTransactionId(rs.getLong("giving_loan_transaction_id"));
+        }
+
+        public static boolean AddToPayBackLoan(long paybackLoanTransactionId, long giveLoanTransactionId) {
+            int blockchainHeight = Nxt.getBlockchain().getHeight();
+
+            try (Connection con = Db.db.getConnection();
+                 PreparedStatement pstmtInsert = con.prepareStatement("INSERT INTO ACCOUNT_PAYBACK_LOAN "
+                         +" (Payback_Loan_Transaction_Id,GIVING_LOAN_TRANSACTION_ID,HEIGHT, latest)"
+                         +" VALUES(?,?,?,true)")) {
+                int i = 0;
+                pstmtInsert.setLong(++i, paybackLoanTransactionId);
+                pstmtInsert.setLong(++i, giveLoanTransactionId);
+                pstmtInsert.setLong(++i, blockchainHeight);
+                int rowsAffected = pstmtInsert.executeUpdate();
+                if (rowsAffected != 1) {
+                    Logger.logDebugMessage("AccountPaybackLoan:PayBackLoan - Insert payback loan sql returned " + rowsAffected + " rows affected. It should be 1");
+
+                }
+            } catch (SQLException e) {
+                Logger.logDebugMessage("Failed to insert loan to DB: " + e.getMessage());
+                throw new RuntimeException(e.toString(), e);
+            }
+            return true;
+        }
+
+        public static boolean IsLoanWasPayedBack(long giveLoanTransactionId) {
+            Connection con = null;
+            Logger.logDebugMessage("GetLoan: giveLoanTransactionId= " + giveLoanTransactionId);
+            try {
+                con = Db.db.getConnection();
+                PreparedStatement pstmt = con.prepareStatement("SELECT * from ACCOUNT_PAYBACK_LOAN WHERE giving_loan_transaction_id = ?");
+                int i = 0;
+                pstmt.setLong(++i, giveLoanTransactionId);
+
+                boolean isLoanWasPayedBack = false;
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        isLoanWasPayedBack = true;
+                    }
+                }
+                return isLoanWasPayedBack;
+            } catch (SQLException e) {
+                DbUtils.close(con);
+                throw new RuntimeException(e.toString(), e);
+            }
+        }
+
+        private void save(Connection con) throws SQLException {
+            try (PreparedStatement pstmt = con.prepareStatement("MERGE INTO account_payback_loan "
+                    +" (Payback_Loan_Transaction_Id,GIVING_LOAN_TRANSACTION_ID,HEIGHT, latest)"
+                    + "KEY (Payback_Loan_Transaction_Id, height) VALUES (?,?,?, TRUE)")) {
+                int i = 0;
+                pstmt.setLong(++i, this.getPaybackLoanTransactionId());
+                pstmt.setLong(++i, this.getGiveLoanTransactionId());
+                pstmt.setInt(++i, Nxt.getBlockchain().getHeight());
+
+                pstmt.executeUpdate();
+            }
+        }
+
+        public long getPaybackLoanTransactionId() {
+            return paybackLoanTransactionId;
+        }
+
+        public void setPaybackLoanTransactionId(long paybackLoanTransactionId) {
+            this.paybackLoanTransactionId = paybackLoanTransactionId;
+        }
+
+        public long getGiveLoanTransactionId() {
+            return giveLoanTransactionId;
+        }
+
+        public void setGiveLoanTransactionId(long giveLoanTransactionId) {
+            this.giveLoanTransactionId = giveLoanTransactionId;
+        }
+    }
     
     public static final class AccountLoan {
 
@@ -279,7 +371,6 @@ public final class Account {
         private long lonHeightFrom;
         private long loanBlocksDuration;
         private long giveLoanTransactionId;
-        private long returnLoanTransactionId;
 
 
         private AccountLoan(long loanerId,
@@ -292,7 +383,6 @@ public final class Account {
             this.setLoanInterest(loanInterest);
             this.loanGetterId = loanGetterId;
             this.setGiveLoanTransactionId(giveLoanTransactionId);
-            this.setReturnLoanTransactionId(0);
 
         }
         
@@ -305,7 +395,6 @@ public final class Account {
             this.setLoanInterest(rs.getLong("LOAN_INTEREST"));
             this.loanGetterId = rs.getLong("LOAN_GETTER_ID");
             this.setGiveLoanTransactionId(rs.getLong("giving_loan_transaction_id"));
-            this.setReturnLoanTransactionId(rs.getLong("returning_loan_transaction_id"));
         }
         
         public static boolean AddToLoan(long loanerId,
@@ -321,8 +410,8 @@ public final class Account {
             try (Connection con = Db.db.getConnection(); 
             		PreparedStatement pstmtInsert = con.prepareStatement("INSERT INTO ACCOUNT_LOAN "
             				+" (LOAN_GETTER_ID,LOANER_ID,LOAN_AMOUNT,LOAN_INTEREST,LOAN_HEIGHT_FROM,LOAN_BLOCKS_DURATION,HEIGHT,"
-            				+" GIVING_LOAN_TRANSACTION_ID,RETURNING_LOAN_TRANSACTION_ID,LATEST)" 
-            				+" VALUES(?,?,?,?,?,?,?,?,null,true)")) { // TODO: Should it always be latest? Should we keep this column?
+            				+" GIVING_LOAN_TRANSACTION_ID,LATEST)"
+            				+" VALUES(?,?,?,?,?,?,?,?,true)")) { // TODO: Should it always be latest? Should we keep this column?
             	int i = 0;
             	pstmtInsert.setLong(++i, loanGetterId);
             	pstmtInsert.setLong(++i, loanerId);
@@ -342,26 +431,6 @@ public final class Account {
             	throw new RuntimeException(e.toString(), e);
             }
         	return true;
-        }
-
-        public static boolean PayBackLoan(long giveLoanTransactionId, long returnLoanTransactionId) {
-            Connection con = null;
-            Logger.logDebugMessage("PayBackLoan: giveLoanTransactionId= " + giveLoanTransactionId + "returnLoanTransactionId=" + returnLoanTransactionId);
-            try {
-                con = Db.db.getConnection();
-                PreparedStatement pstmt = con.prepareStatement("UPDATE account_loan set returning_loan_transaction_id = ? where giving_loan_transaction_id = ?");
-
-                int i = 0;
-                pstmt.setLong(++i, returnLoanTransactionId);
-                pstmt.setLong(++i, giveLoanTransactionId);
-
-                pstmt.executeUpdate();
-
-            } catch (SQLException e) {
-                DbUtils.close(con);
-                throw new RuntimeException(e.toString(), e);
-            }
-            return true;
         }
 
         public static AccountLoan GetLoan(long giveLoanTransactionId) {
@@ -389,7 +458,7 @@ public final class Account {
         private void save(Connection con) throws SQLException {
             try (PreparedStatement pstmt = con.prepareStatement("MERGE INTO account_loan "
                     + "(LOAN_GETTER_ID, LOANER_ID, loan_amount, loan_interest, loan_height_from, "
-                    + "loan_blocks_duration, giving_loan_transaction_id , returning_loan_transaction_id,height, latest) "
+                    + "loan_blocks_duration, giving_loan_transaction_id ,height, latest) "
                     + "KEY (loaner_id, height) VALUES (?, ?, ?, ?, ?, ?, ?,?,?, TRUE)")) {
                 int i = 0;
                 pstmt.setLong(++i, this.getLoanGetterId());
@@ -399,7 +468,6 @@ public final class Account {
                 DbUtils.setLongZeroToNull(pstmt, ++i, this.getLonHeightFrom());
                 DbUtils.setLongZeroToNull(pstmt, ++i, this.getLoanBlocksDuration());
                 pstmt.setLong(++i, this.getGiveLoanTransactionId());
-                DbUtils.setLongZeroToNull(pstmt, ++i, this.getReturnLoanTransactionId());
                 pstmt.setInt(++i, Nxt.getBlockchain().getHeight());
                 
                 pstmt.executeUpdate();
@@ -496,20 +564,6 @@ public final class Account {
 		 */
 		public void setGiveLoanTransactionId(long giveLoanTransactionId) {
 			this.giveLoanTransactionId = giveLoanTransactionId;
-		}
-
-		/**
-		 * @return the returnLoanTransactionId
-		 */
-		public long getReturnLoanTransactionId() {
-			return returnLoanTransactionId;
-		}
-
-		/**
-		 * @param returnLoanTransactionId the returnLoanTransactionId to set
-		 */
-		public void setReturnLoanTransactionId(long returnLoanTransactionId) {
-			this.returnLoanTransactionId = returnLoanTransactionId;
 		}
 
     }
