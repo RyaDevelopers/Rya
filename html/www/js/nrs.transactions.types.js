@@ -348,13 +348,13 @@ var NRS = (function(NRS, $, undefined) {
             'iconHTML': "<i class='fa fa-balance-scale'></i>",
             'subTypes': {
                 0: {
-                    'title': "Return loan",
+                    'title': "Return RYO",
                     'i18nKeyTitle': 'returnLoan',
                     'iconHTML': "<i class='fa fa-money'></i>",
                     'receiverPage': 'transactions'
                 },
                 1: {
-                    'title': "Give loan",
+                    'title': "Lend RYO",
                     'i18nKeyTitle': 'giveLoan',
                     'iconHTML': "<i class='fa fa-money'></i>",
                     'receiverPage': 'transactions'

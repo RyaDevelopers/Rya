@@ -1875,6 +1875,6 @@
   "loan_duration_help_var": "A loan of __blocks__ blocks is about __days__ days.",
   "loan_duration_minimal_value": "Loan duration must be at least __minLoanDuration__ blocks",
   "loanTitle": "Loan",
-  "returnLoan": "Return loan",
-  "giveLoan": "Give loan"
+  "returnLoan": "Return RYO",
+  "giveLoan": "Lend RYO"
 }
