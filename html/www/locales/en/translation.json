@@ -1876,5 +1876,5 @@
   "loan_duration_minimal_value": "Loan duration must be at least __minLoanDuration__ blocks",
   "loanTitle": "Loan",
   "returnLoan": "Return RYO",
-  "giveLoan": "Lend RYO"
+  "giveLoan": "Lend RYO" 
 }
