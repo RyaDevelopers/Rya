@@ -375,9 +375,9 @@ public abstract class TransactionType {
             long res = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
 
 			Logger.logDebugMessage("getTrustNeededForLoan res=" +
-                    String.valueOf(res)+ " total_trust="
+					String.valueOf(res)+ " total_trust="
 					+ String.valueOf(Account.getTotalTrust()) + " total_balance="
-                    + String.valueOf( Account.getTotalBalanceNQT()));
+					+ String.valueOf( Account.getTotalBalanceNQT()));
 
 			return res;
 		}
