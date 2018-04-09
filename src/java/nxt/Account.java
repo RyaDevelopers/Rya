@@ -612,20 +612,6 @@ public final class Account {
                 accountTrustTable.delete(this);
             }
         }
-//
-//        void addTrustToBalanceAndUnconfirmedBalanceNQT(LedgerEvent event, long eventId, long trustAmountToAdd) { //TODO ccc this function adds monet to recipient
-//            if (trustAmountToAdd == 0) {
-//                return;
-//            }
-//
-//            this.units = Math.addExact(this.units, trustAmountToAdd);
-//            this.unconfirmedUnits = Math.addExact(this.unconfirmedUnits, trustAmountToAdd);
-//            checkBalance(this.accountId, this.units, this.unconfirmedUnits);
-//            save();
-//            trustListeners.notify(this, Event.TRUST);
-//            trustListeners.notify(this, Event.UNCONFIRMED_TRUST);
-//
-//        }
     }
 
     public static final class AccountInfo {
@@ -1597,10 +1583,6 @@ public final class Account {
     public long getUnconfirmedBalanceNQT() {
         return unconfirmedBalanceNQT;
     }
-
-//    public long getUnconfirmedTrustNQT() {
-//        return unconfirmedTrustNQT;
-//    }
 
     public long getForgedBalanceNQT() {
         return forgedBalanceNQT;
