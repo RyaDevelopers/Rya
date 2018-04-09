@@ -115,7 +115,7 @@ public final class JSONData {
                 json.put("guaranteedBalanceNQT", String.valueOf(account.getGuaranteedBalanceNQT(Constants.GUARANTEED_BALANCE_CONFIRMATIONS, height)));
             }
             if (includeTrustBalance) {
-            	json.put("effectiveTrustBalance", account.getEffectiveTrust());
+            	json.put("effectiveTrustBalance", account.getUnconfirmedTrustQ_Nqt(height));
             }
         }
         return json;

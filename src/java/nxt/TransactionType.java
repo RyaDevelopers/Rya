@@ -367,22 +367,31 @@ public abstract class TransactionType {
 			return TransactionType.TYPE_LOAN;
 		}
 
+		//private long trustNeededForLoan = -1;
+
 		long getTrustNeededForLoan(long amount_nqt) {
 
-
+//            if (trustNeededForLoan != -1)
+//            {
+//                Logger.logDebugMessage("getTrustNeededForLoan precalculated trustNeededForLoan=" +
+//                        String.valueOf(trustNeededForLoan);
+//
+//                return trustNeededForLoan;
+//            }
 
 			BigInteger totalTrust = BigInteger.valueOf(Account.getTotalTrust());
 			BigInteger totalBalance = BigInteger.valueOf(Account.getTotalBalanceNQT());
             BigInteger amount_nqt_big = BigInteger.valueOf(amount_nqt);
 
-            long res = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
+            long trustNeededForLoan = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
 
 			Logger.logDebugMessage("getTrustNeededForLoan res=" +
-					String.valueOf(res)+ " total_trust="
+					String.valueOf(trustNeededForLoan)+ " total_trust="
 					+ String.valueOf(Account.getTotalTrust()) + " total_balance="
-					+ String.valueOf( Account.getTotalBalanceNQT()));
+					+ String.valueOf( Account.getTotalBalanceNQT()) + "amount_nqt_big="
+                    + String.valueOf(amount_nqt));
 
-			return res;
+			return trustNeededForLoan;
 		}
 
 		@Override
@@ -406,7 +415,7 @@ public abstract class TransactionType {
 			if (getSubtype() == TransactionType.SUBTYPE_LOAN_GIVE_LOAN) {
 				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
 				Logger.logDebugMessage("undoAttachmentUnconfirmed LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
-				senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
+				senderAccount.addToTrustBalance(0, getTrustNeededForLoan(attachment.getLoanAmount()));
 			} else {
                 Logger.logDebugMessage("undoAttachmentUnconfirmed : payback loan, do nothing");
 			}
@@ -459,6 +468,7 @@ public abstract class TransactionType {
                 Logger.logDebugMessage("TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
                 Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
                 try {
+                    Logger.logDebugMessage("TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
                     senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
                     AccountLoan.AddToLoan(transaction.getSenderId(), (long)transaction.getHeight(), (long)attachment.getPeriod(), //TODO better casting?
                     		transaction.getAmountNQT(), attachment.getLoanInterest(), transaction.getRecipientId(),
