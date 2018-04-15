@@ -347,7 +347,6 @@ final class BlockImpl implements Block {
     }
 
     boolean verifyGenerationSignature() throws BlockchainProcessor.BlockOutOfOrderException {
-
         try {
 
             BlockImpl previousBlock = BlockchainImpl.getInstance().getBlock(getPreviousBlockId());

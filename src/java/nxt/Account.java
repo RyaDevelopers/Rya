@@ -310,11 +310,9 @@ public final class Account {
         }
 
         public static boolean IsLoanWasPayedBack(long giveLoanTransactionId) {
-            Connection con = null;
             Logger.logDebugMessage("GetLoan: giveLoanTransactionId= " + giveLoanTransactionId);
-            try {
-                con = Db.db.getConnection();
-                PreparedStatement pstmt = con.prepareStatement("SELECT * from ACCOUNT_PAYBACK_LOAN WHERE giving_loan_transaction_id = ?");
+            try(Connection con = Db.db.getConnection();
+                PreparedStatement pstmt = con.prepareStatement("SELECT * from ACCOUNT_PAYBACK_LOAN WHERE giving_loan_transaction_id = ?")) {
                 int i = 0;
                 pstmt.setLong(++i, giveLoanTransactionId);
 
@@ -326,7 +324,6 @@ public final class Account {
                 }
                 return isLoanWasPayedBack;
             } catch (SQLException e) {
-                DbUtils.close(con);
                 throw new RuntimeException(e.toString(), e);
             }
         }
@@ -434,11 +431,9 @@ public final class Account {
         }
 
         public static AccountLoan GetLoan(long giveLoanTransactionId) {
-            Connection con = null;
             Logger.logDebugMessage("GetLoan: giveLoanTransactionId= " + giveLoanTransactionId);
-            try {
-                con = Db.db.getConnection();
-                PreparedStatement pstmt = con.prepareStatement("SELECT * from account_loan WHERE giving_loan_transaction_id = ?");
+            try(Connection con = Db.db.getConnection();
+                PreparedStatement pstmt = con.prepareStatement("SELECT * from account_loan WHERE giving_loan_transaction_id = ?")) {
                 int i = 0;
                 pstmt.setLong(++i, giveLoanTransactionId);
 
@@ -450,7 +445,6 @@ public final class Account {
                 }
                 return accountLoan;
             } catch (SQLException e) {
-                DbUtils.close(con);
                 throw new RuntimeException(e.toString(), e);
             }
         }
