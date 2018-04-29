@@ -1807,12 +1807,10 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     }
 
     private static long getLoanInterest(long giveLoanTransactionId) {
-        Connection con = null;
         long loanInterest = -1;
         Logger.logDebugMessage("getLoanInterest: giveLoanTransactionId= " + giveLoanTransactionId);
-        try {
-            con = Db.db.getConnection();
-            PreparedStatement pstmt = con.prepareStatement("SELECT * from account_loan WHERE giving_loan_transaction_id = ?");
+        try(Connection con = Db.db.getConnection();
+            PreparedStatement pstmt = con.prepareStatement("SELECT * from account_loan WHERE giving_loan_transaction_id = ?")) {
             int i = 0;
             pstmt.setLong(++i, giveLoanTransactionId);
 
