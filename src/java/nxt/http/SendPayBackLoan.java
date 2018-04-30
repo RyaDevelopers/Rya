@@ -37,7 +37,7 @@ public final class SendPayBackLoan extends CreateTransaction {
     protected JSONStreamAware processRequest(HttpServletRequest req) throws NxtException {
         Logger.logDebugMessage("SendPayBackLoan:processRequest start");
         long loanId = ParameterParser.getLoanId(req);
-        long payBackLoanAmount = ParameterParser.getPayBackLoanAmount(req);
+        long payBackLoanAmount = ParameterParser.getAmountNQT(req);
         long payBackLoanFee = ParameterParser.getFeeNQT(req);
         Account account = ParameterParser.getSenderAccount(req);
         long recipient = ParameterParser.getAccountId(req, "recipient", true);

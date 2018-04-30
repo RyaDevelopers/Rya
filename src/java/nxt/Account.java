@@ -540,7 +540,7 @@ public final class Account {
 		}
 
 		/**
-		 * @param loanHeightTo the loanHeightTo to set
+		 * @param loanBlocksDuration the loanBlocksDuration to set
 		 */
 		public void setLoanBlocksDuration(long loanBlocksDuration) {
 			this.loanBlocksDuration = loanBlocksDuration;

@@ -639,6 +639,16 @@ var NRS = (function (NRS, $, undefined) {
                     return false;
                 }
                 break;
+            case "loanMoney":
+                if (transaction.type !== 8 || transaction.subtype !== 1) {
+                    return false;
+                }
+                break;
+            case "payBackLoan":
+                if (transaction.type !== 8 || transaction.subtype !== 0) {
+                    return false;
+                }
+                break;
             case "setAlias":
                 if (transaction.type !== 1 || transaction.subtype !== 1) {
                     return false;

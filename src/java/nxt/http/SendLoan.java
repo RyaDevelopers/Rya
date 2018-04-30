@@ -37,14 +37,15 @@ public final class SendLoan extends CreateTransaction {
     protected JSONStreamAware processRequest(HttpServletRequest req) throws NxtException {
     	Logger.logDebugMessage("SendLoan:processRequest start");
         long recipient = ParameterParser.getAccountId(req, "recipient", true);
-        long loanAmount = ParameterParser.getLoanAmountNQT(req);
+        long loanAmount = ParameterParser.getAmountNQT(req);
         int durationInBlocks = ParameterParser.getDurationInBlocks(req); // Get the loan duration in blocks unit
         long interestFee = ParameterParser.getInterestFeeNQT(req); // Get the loan interest in trust coins
         long totalAmout = loanAmount;
         Account account = ParameterParser.getSenderAccount(req);
         Attachment attachment = new Attachment.Loan(durationInBlocks,loanAmount,interestFee);
         Logger.logDebugMessage("SendLoan:processRequest succeed, creating transaction");
-        return createTransaction(req, account, recipient, totalAmout, attachment); 
+        JSONStreamAware reply = createTransaction(req, account, recipient, totalAmout, attachment); 
+        return reply;
     }
 
 }
