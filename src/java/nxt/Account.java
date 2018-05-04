@@ -1656,7 +1656,7 @@ public final class Account {
     }
 
     public long getEffectiveBalanceNXT(int height) {
-        if (height <= 1440) {
+        if (height <= (720 - 1)) {
             Account genesisAccount = getAccount(id, 0);
             if (genesisAccount != null)
                 Logger.logDebugMessage("we are starting the chain, : " + String.valueOf(genesisAccount.getBalanceNQT() / Constants.ONE_NXT));
