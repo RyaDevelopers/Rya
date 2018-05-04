@@ -565,7 +565,7 @@ public abstract class TransactionType {
 
 			@Override
             final void applyAttachment(Transaction transaction, Account senderAccount, Account recipientAccount) {
-                Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started");
+                Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started apply attachment");
                 Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
                 long loanId = attachment.getLoanId();
                 long paybackLoanTransactionId = transaction.getId();
@@ -585,7 +585,7 @@ public abstract class TransactionType {
 
 			@Override
 			void validateAttachment(Transaction transaction) throws NxtException.ValidationException {
-                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started");
+                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started validateAttachment");
                 Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
                 long loanId = attachment.getLoanId();
                 long paybackLoanTransactionId = transaction.getId();
