@@ -588,8 +588,7 @@ public abstract class TransactionType {
                 Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started validateAttachment");
                 Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
                 long loanId = attachment.getLoanId();
-                long paybackLoanTransactionId = transaction.getId();
-                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
+                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, loanId()=" + loanId);
 
 
 				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
@@ -629,7 +628,7 @@ public abstract class TransactionType {
                             format.format(loanAmount_nxt),
                             format.format(interest_nxt)));
 				}
-                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN succeeded, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
+                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN succeeded, loanId()=" + loanId);
 			}
 
 			public long getLoanInterest(long loanId) {
