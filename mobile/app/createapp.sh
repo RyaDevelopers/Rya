@@ -6,7 +6,7 @@ then
 	exit 1
 fi
 rm -rf wallet
-cordova create wallet org.nxt.mobile.wallet "NXT Mobile Wallet" --template ../../html
+cordova create wallet org.ryo.mobile.wallet "RYO Mobile Wallet" --template ../../html
 cd wallet
 rm -rf icons
 rm -rf plugins

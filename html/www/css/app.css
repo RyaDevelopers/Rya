@@ -2034,6 +2034,15 @@ body > .header .logo .icon {
 #lockscreen_active_plugins_warning label:hover
 { opacity: 1.0; }
 
+#lockscreen_loader {
+	z-index:-10;
+	position:fixed;
+	top:50%;
+	left:50%;
+	-webkit-transform:translate(-50%,-50%);
+	transform:translate(-50%,-50%);
+}
+
 /*
     skin-blue
     ---------

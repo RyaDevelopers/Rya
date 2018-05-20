@@ -54,6 +54,7 @@ var NRS = (function(NRS, $, undefined) {
             $(".mobile-only").show();
         }
         $("#login_panel").show();
+        $("#lockscreen_loader").hide();
 	};
 
 	NRS.showWelcomeScreen = function() {
@@ -62,6 +63,7 @@ var NRS = (function(NRS, $, undefined) {
             $(".mobile-only").show();
         }
 		$("#welcome_panel").show();
+		$("#lockscreen_loader").hide();
 	};
 
     NRS.createPassphraseToConfirmPassphrase = function() {
