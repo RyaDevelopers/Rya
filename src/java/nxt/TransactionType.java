@@ -597,6 +597,14 @@ public abstract class TransactionType {
 				    throw new NxtException.NotValidException("Loan transaction " + attachment.getStringLoanId() + " was not completed yet, try again after current block is closed");
                 }
 
+                long loanerId= accountLoan.getLoanerId();
+                Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN loanerId = " + loanerId);
+                Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getRecipientId() = " + transaction.getRecipientId());
+                
+                if (loanerId != transaction.getRecipientId()) {
+                    throw new NxtException.NotValidException("Incorrect recipient id - recepient must be the loaner");
+                }
+
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanBlocksDuration() = " + accountLoan.getLoanBlocksDuration());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanAmount() = " + attachment.getPayBackLoanAmount());
 				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanAmount() = " + accountLoan.getLoanAmount());
