@@ -1634,13 +1634,14 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     }
     
     private static final long blocksPerYear = 525600;
-    public static long trustFromCoins(long blocks, long amountNQT, long blockGoodInterest) {
-        return (((amountNQT * blockGoodInterest / Account.getTotalBalanceNQT()) * blocks)/ blocksPerYear);
+    public static long trustFromCoins(long blocks, long amountNQT, long blockGoodInterest, long totalCoinsNQT) {
+        return (((amountNQT / totalCoinsNQT * blockGoodInterest) * blocks)/ blocksPerYear);
     }
     
     public static final int SHARDING_FACTOR = 1440;  
     public List<TrustTransfer> createTrustTrusferForBlock(int prevHeight, byte[] blockPayloadHash, Block block) {
     		long blockGoodInterest = block.getTotalGoodLoansInterest();
+    		long totalCoinsNQT = Account.getTotalBalanceNQT();
         List<TrustTransfer> change_list = new ArrayList<TrustTransfer>(); 
         /* this is the most basic implementation i could think of */
         DbIterator<Account> iter = Account.iterAllPrevHeightAndShard(prevHeight, "id", SHARDING_FACTOR, blockPayloadHash);
@@ -1649,7 +1650,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
 	        	curr = iter.next();
 	        	if (curr.getBalanceNQT() > 0) {
 	        		//Logger.logDebugMessage("adding trust for account id %d", curr.getId());
-	        		change_list.add(new TrustTransfer(trustFromCoins(SHARDING_FACTOR, curr.getBalanceNQT(), blockGoodInterest),
+	        		change_list.add(new TrustTransfer(trustFromCoins(SHARDING_FACTOR, curr.getBalanceNQT(), blockGoodInterest, totalCoinsNQT),
 	        				curr.getId(), blockchain.getHeight()));
 	    		}
 	    	}
