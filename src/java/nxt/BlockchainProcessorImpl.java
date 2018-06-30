@@ -1286,7 +1286,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
                 validatePhasedTransactions(previousLastBlock.getHeight(), validPhasedTransactions, invalidPhasedTransactions, duplicates);
                 validateTransactions(block, previousLastBlock, curTime, duplicates, previousLastBlock.getHeight() >= Constants.LAST_CHECKSUM_BLOCK);
                 Logger.logDebugMessage("pushBlock: calling createTrustTrusferForBlock previousLastBlock hight= " + previousLastBlock.getHeight() + ", previousLastBlock.PayloadHash= " + Arrays.toString(previousLastBlock.getPayloadHash()));
-                Iterator<TrustTransfer> iterator = createTrustTrusferForBlock(previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
+                Iterator<TrustTransfer> iterator = createTrustTrusferForBlock(previousLastBlock.getHeight(), previousLastBlock.getPayloadHash(), block).iterator();
                 while (iterator.hasNext()) {
                         TrustTransfer trans = iterator.next();
                         Account recipientAccount = Account.getAccount(trans.getRecipientId());
@@ -1632,26 +1632,33 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     private int getTransactionVersion(int previousBlockHeight) {
         return 1;
     }
-    public static final long trustFromCoinPerYearRatioQT = 10; //0.1 coin
-    private static final long blocksPerYear = 525600;
+//    public static final long trustFromCoinPerYearRatioQT = 10; //0.1 coin
 
-    public  static long trustFromCoins(long blocks, long amountNQT) {
-        return (((amountNQT / trustFromCoinPerYearRatioQT) * blocks)/ blocksPerYear);
+//    public  static long trustFromCoins(long blocks, long amountNQT) {
+//        return (((amountNQT / trustFromCoinPerYearRatioQT) * blocks)/ blocksPerYear);
+//    }
+    
+    private static final long blocksPerYear = 525600;
+    public static long trustFromCoins(long blocks, long amountNQT, long blockGoodInterest) {
+        return (((amountNQT * blockGoodInterest / Account.getTotalBalanceNQT()) * blocks)/ blocksPerYear);
     }
+    
     public static final int SHARDING_FACTOR = 1440;  
-    public List<TrustTransfer> createTrustTrusferForBlock(int prevHeight, byte[] blockPayloadHash) {
+    public List<TrustTransfer> createTrustTrusferForBlock(int prevHeight, byte[] blockPayloadHash, Block block) {
+    		long blockGoodInterest = block.getTotalGoodLoansInterest();
         List<TrustTransfer> change_list = new ArrayList<TrustTransfer>(); 
         /* this is the most basic implementation i could think of */
         DbIterator<Account> iter = Account.iterAllPrevHeightAndShard(prevHeight, "id", SHARDING_FACTOR, blockPayloadHash);
         Account curr;
         while (iter.hasNext()) {
-        	curr = iter.next();
-        	if (curr.getBalanceNQT() > 0) {
-        		//Logger.logDebugMessage("adding trust for account id %d", curr.getId());
-        		change_list.add(new TrustTransfer(trustFromCoins(SHARDING_FACTOR,curr.getBalanceNQT()), curr.getId(), blockchain.getHeight()));
-    		}
-    	}
-    	return change_list;
+	        	curr = iter.next();
+	        	if (curr.getBalanceNQT() > 0) {
+	        		//Logger.logDebugMessage("adding trust for account id %d", curr.getId());
+	        		change_list.add(new TrustTransfer(trustFromCoins(SHARDING_FACTOR, curr.getBalanceNQT(), blockGoodInterest),
+	        				curr.getId(), blockchain.getHeight()));
+	    		}
+	    	}
+	    	return change_list;
     }
     private boolean verifyChecksum(byte[] validChecksum, int fromHeight, int toHeight) {
         MessageDigest digest = Crypto.sha256();

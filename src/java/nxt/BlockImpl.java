@@ -149,6 +149,19 @@ final class BlockImpl implements Block {
     public long getTotalInterestNQT() {
         return totalInterestNQT;
     }
+    
+    @Override
+    public long getTotalGoodLoansInterest() {
+    		long totalInterest = 0;
+    		for (TransactionImpl transaction : blockTransactions) {
+    			if (transaction.getType().getSubtype() == TransactionType.Loan.SEND_PAY_BACK_LOAN.getSubtype()) {
+    				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
+    				totalInterest += attachment.getLoanInterest();
+    			}
+    		}
+    		
+    		return totalInterest;
+    }
 
     @Override
     public int getPayloadLength() {
