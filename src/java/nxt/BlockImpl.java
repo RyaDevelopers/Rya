@@ -16,6 +16,7 @@
 
 package nxt;
 
+import nxt.Account.AccountLoan;
 import nxt.AccountLedger.LedgerEvent;
 import nxt.crypto.Crypto;
 import nxt.util.Convert;
@@ -155,8 +156,9 @@ final class BlockImpl implements Block {
     		long totalInterest = 0;
     		for (TransactionImpl transaction : blockTransactions) {
     			if (transaction.getType().getSubtype() == TransactionType.Loan.SEND_PAY_BACK_LOAN.getSubtype()) {
-    				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
-    				totalInterest += attachment.getLoanInterest();
+    				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+    				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
+    				totalInterest += accountLoan.getLoanInterest();
     			}
     		}
     		
