@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.text.DecimalFormat;
 
+import static nxt.Constants.ONE_NXT;
 import static nxt.Constants.ONE_TRUST;
 
 public abstract class TransactionType {
@@ -367,9 +368,10 @@ public abstract class TransactionType {
 			return TransactionType.TYPE_LOAN;
 		}
 
+
 		long getTrustNeededForLoan(long amount_nqt) {
 			BigInteger totalTrust = BigInteger.valueOf(Account.getTotalTrust());
-			BigInteger totalBalance = BigInteger.valueOf(Account.getTotalBalanceNQT());
+                BigInteger totalBalance = BigInteger.valueOf(Account.getTotalBalanceNQT());
             BigInteger amount_nqt_big = BigInteger.valueOf(amount_nqt);
 
             long res = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
@@ -418,9 +420,22 @@ public abstract class TransactionType {
 		public final boolean isPhasingSafe() {
 			return true;
 		}
-
 		
-		public static final TransactionType SEND_LOAN = new Loan() {
+        public static final TransactionType SEND_LOAN = new Loan() {
+
+            private final Fee LOAN_FEE = new Fee.SizeBasedFee(1 * Constants.ONE_NXT, 1 * Constants.ONE_NXT, 100) {
+                @Override
+                public int getSize(TransactionImpl transaction, Appendix appendage) {
+                    Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
+                    Logger.logDebugMessage("calc fee, loan size: %d", attachment.getLoanAmount());
+                    return (int)((attachment.getLoanAmount()) /ONE_NXT);
+                }
+            };
+
+            @Override
+            Fee getBaselineFee(Transaction transaction) {
+                return LOAN_FEE;
+            }
 
 			@Override
 			public final byte getSubtype() {
@@ -497,6 +512,7 @@ public abstract class TransactionType {
 		};
 
 		public static final TransactionType SEND_PAY_BACK_LOAN = new Loan() {
+
 
 			@Override
 			public final byte getSubtype() {
