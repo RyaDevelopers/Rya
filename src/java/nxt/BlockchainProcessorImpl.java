@@ -1632,11 +1632,6 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     private int getTransactionVersion(int previousBlockHeight) {
         return 1;
     }
-//    public static final long trustFromCoinPerYearRatioQT = 10; //0.1 coin
-
-//    public  static long trustFromCoins(long blocks, long amountNQT) {
-//        return (((amountNQT / trustFromCoinPerYearRatioQT) * blocks)/ blocksPerYear);
-//    }
     
     private static final long blocksPerYear = 525600;
     public static long trustFromCoins(long blocks, long amountNQT, long blockGoodInterest) {

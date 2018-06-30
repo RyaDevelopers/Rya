@@ -556,8 +556,7 @@ public abstract class TransactionType {
 				return total_trust + lostFromCoins(blocks, total_amount, fees_and_intrests_in_block);
 			}
 
-			long trustGain
-			(long loanLenght, long loan_amount, long loan_fee, long fees_and_intrests_in_block) {
+			long trustGain(long loanLenght, long loan_amount, long loan_fee, long fees_and_intrests_in_block) {
 				long trust_for_loan = getTrustNeededForLoan(loan_amount);
 				return lostFromCoins(loanLenght, loan_amount, fees_and_intrests_in_block) +
 						lostFromCoins(loanLenght, loan_fee, fees_and_intrests_in_block) +
