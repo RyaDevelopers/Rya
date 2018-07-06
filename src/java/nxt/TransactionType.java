@@ -428,7 +428,7 @@ public abstract class TransactionType {
                 public int getSize(TransactionImpl transaction, Appendix appendage) {
                     Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
                     Logger.logDebugMessage("calc fee, loan size: %d", attachment.getLoanAmount());
-                    return (int)((attachment.getLoanAmount()) /ONE_NXT);
+                    return (int)((attachment.getLoanAmount() + attachment.getLoanInterest()) / ONE_NXT);
                 }
             };
 
