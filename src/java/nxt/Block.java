@@ -48,6 +48,8 @@ public interface Block {
     long getTotalFeeNQT();
 
     long getTotalInterestNQT();
+    
+    long getTotalGoodLoansInterest();
 
     int getPayloadLength();
 
