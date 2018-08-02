@@ -668,8 +668,8 @@ class NxtDbVersion extends DbVersion {
                         + "loaner_id BIGINT NOT NULL, loan_amount BIGINT NOT NULL, loan_interest BIGINT NOT NULL, "
             			+ "loan_height_from BIGINT NOT NULL, loan_blocks_duration BIGINT NOT NULL, height INT NOT NULL, "
                         + "giving_loan_transaction_id BIGINT, "
-                        + "trustDeposit BIGIN NOT NULL"
-                        + "latest BOOLEAN NOT NULL DEFAULT TRUE),");
+                        + "trustDeposit BIGINT, "
+                        + "latest BOOLEAN NOT NULL DEFAULT TRUE)");
             case 240:
                 Logger.logDebugMessage("creating payback loan table");
                 apply("CREATE TABLE IF NOT EXISTS account_payback_loan (db_id IDENTITY, "

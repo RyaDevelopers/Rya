@@ -1292,7 +1292,9 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
                         Account recipientAccount = Account.getAccount(trans.getRecipientId());
                         recipientAccount.addToTrustBalance(trans.getAmount(), trans.getAmount());
                 }
-                Iterator<TrustTransfer> ReturnLoanIterator = createTrustTrusferForBlockFromReturnLoans(block, previousLastBlock, previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
+
+                Iterator<TrustTransfer> ReturnLoanIterator = createTrustTrusferForBlockFromReturnLoans(
+                        /*block, */previousLastBlock, previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
 //                while (iterator.hasNext()) {
 //                    TrustTransfer trans = iterator.next();
 //                    Account recipientAccount = Account.getAccount(trans.getRecipientId());
@@ -1663,7 +1665,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
 	    	return change_list;
     }
 
-    public List<TrustTransfer> createTrustTrusferForBlockFromReturnLoans(Block block, Block previousBlock, int prevHeight, byte[] blockPayloadHash) {
+    public List<TrustTransfer> createTrustTrusferForBlockFromReturnLoans(/*Block block, */Block previousBlock, int prevHeight, byte[] blockPayloadHash) {
 
         Map<TransactionType, Map<String, Integer>> duplicates = new HashMap<>();
         List<TrustTransfer> change_list = new ArrayList<TrustTransfer>();
@@ -1677,7 +1679,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
             }
         }
 
-        SortedSet<UnconfirmedTransaction> sortedTransactions = selectUnconfirmedTransactions(duplicates, previousBlock, block.getTimestamp());
+        SortedSet<UnconfirmedTransaction> sortedTransactions = selectUnconfirmedTransactions(duplicates, previousBlock, previousBlock.getTimestamp());
         long goodInterestNQT = 0;
         Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans");
         for (UnconfirmedTransaction unconfirmedTransaction : sortedTransactions) {
@@ -1698,7 +1700,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
             }
         }
 
-        long burnedTrust = Account.getBurnedTrust(block.getHeight());
+        long burnedTrust = Account.getBurnedTrust(previousBlock.getHeight());
         for (UnconfirmedTransaction unconfirmedTransaction : sortedTransactions) {
             TransactionImpl transaction = unconfirmedTransaction.getTransaction();
             TransactionType transactionType = transaction.getType();
@@ -1713,8 +1715,8 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
                 }
                 else {
                     long totalTrustToReturn = (loanInterest / goodInterestNQT) * burnedTrust;
-                    change_list.add(new TrustTransfer(totalTrustToReturn/2, transaction.getSenderId(), block.getHeight()));
-                    change_list.add(new TrustTransfer(totalTrustToReturn/2 + getTrustDeposit(transaction.getId()), transaction.getRecipientId(), block.getHeight()));
+                    change_list.add(new TrustTransfer(totalTrustToReturn/2, transaction.getSenderId(), previousBlock.getHeight()));
+                    change_list.add(new TrustTransfer(totalTrustToReturn/2 + getTrustDeposit(transaction.getId()), transaction.getRecipientId(), previousBlock.getHeight()));
                     Logger.logDebugMessage("generateBlock: totalTrustToReturn: " + totalTrustToReturn);
                 }
             }

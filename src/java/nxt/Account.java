@@ -2346,7 +2346,7 @@ public final class Account {
     public static long getBurnedTrust(long hight){
         long total = 0;
         try (Connection con = Db.db.getConnection()){
-            String q = "select SUM(deposit) FROM account_loan al LEFT OUTER  JOIN account_payback_loan apl ON al.GIVING_LOAN_TRANSACTION_ID = apl.GIVING_LOAN_TRANSACTION_ID  where  apl.GIVING_LOAN_TRANSACTION_ID where  (apl.GIVING_LOAN_TRANSACTION_ID  is not null) and (ap.HEIGHT + ap.LOAN_BLOCKS_DURATION = " + hight + " )";
+            String q = "select SUM(deposit) FROM account_loan al LEFT OUTER JOIN account_payback_loan apl ON al.GIVING_LOAN_TRANSACTION_ID = apl.GIVING_LOAN_TRANSACTION_ID where apl.GIVING_LOAN_TRANSACTION_ID where (apl.GIVING_LOAN_TRANSACTION_ID is not null) and (ap.HEIGHT + ap.LOAN_BLOCKS_DURATION = " + hight + " )";
             PreparedStatement pstmtSelect = con.prepareStatement(q);
 
             Logger.logDebugMessage("query=" + q);
