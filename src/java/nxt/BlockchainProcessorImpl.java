@@ -1285,7 +1285,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
                 List<TransactionImpl> invalidPhasedTransactions = new ArrayList<>();
                 validatePhasedTransactions(previousLastBlock.getHeight(), validPhasedTransactions, invalidPhasedTransactions, duplicates);
                 validateTransactions(block, previousLastBlock, curTime, duplicates, previousLastBlock.getHeight() >= Constants.LAST_CHECKSUM_BLOCK);
-                Logger.logDebugMessage("pushBlock: calling createTrustTrusferForBlockFromDrop previousLastBlock hight= " + previousLastBlock.getHeight() + ", previousLastBlock.PayloadHash= " + Arrays.toString(previousLastBlock.getPayloadHash()));
+                Logger.logDebugMessage("pushBlock: calling createTrustTrusferForBlockFromDrop previousLastBlock hight= " + previousLastBlock.getHeight() + ", previousLastBlock.PayloadHash= " + Arrays.toString(previousLastBlock.getPayloadHash()) + ", block= " + block.getId());
                 Iterator<TrustTransfer> dropIterator = createTrustTrusferForBlockFromDrop(previousLastBlock.getHeight(), previousLastBlock.getPayloadHash(), block).iterator();
                 while (dropIterator.hasNext()) {
                         TrustTransfer trans = dropIterator.next();
@@ -1647,9 +1647,10 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     }
     
     public static final int SHARDING_FACTOR = 1440;  
+
     public List<TrustTransfer> createTrustTrusferForBlockFromDrop(int prevHeight, byte[] blockPayloadHash, Block block) {
-    		long blockGoodInterest = block.getTotalGoodLoansInterest();
-    		long totalCoinsNQT = Account.getTotalBalanceNQT();
+		long blockGoodInterest = block.getTotalGoodLoansInterest();
+		long totalCoinsNQT = Account.getTotalBalanceNQT();
         List<TrustTransfer> change_list = new ArrayList<TrustTransfer>(); 
         /* this is the most basic implementation i could think of */
         DbIterator<Account> iter = Account.iterAllPrevHeightAndShard(prevHeight, "id", SHARDING_FACTOR, blockPayloadHash);
