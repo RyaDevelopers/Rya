@@ -368,10 +368,11 @@ public final class Account {
         private long lonHeightFrom;
         private long loanBlocksDuration;
         private long giveLoanTransactionId;
+        private long trustDeposit;
 
 
         private AccountLoan(long loanerId,
-                             long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, long giveLoanTransactionId) {
+                             long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, long giveLoanTransactionId, long trustDeposit) {
             this.loanerId = loanerId;
             this.dbKey = accountLoanDbKeyFactory.newKey(giveLoanTransactionId);
             this.setLonHeightFrom(loanHeightFrom);
@@ -380,7 +381,7 @@ public final class Account {
             this.setLoanInterest(loanInterest);
             this.loanGetterId = loanGetterId;
             this.setGiveLoanTransactionId(giveLoanTransactionId);
-
+            this.trustDeposit = trustDeposit;
         }
         
         private AccountLoan(ResultSet rs, DbKey dbKey) throws SQLException {
@@ -392,11 +393,12 @@ public final class Account {
             this.setLoanInterest(rs.getLong("LOAN_INTEREST"));
             this.loanGetterId = rs.getLong("LOAN_GETTER_ID");
             this.setGiveLoanTransactionId(rs.getLong("giving_loan_transaction_id"));
+            this.setGiveLoanTransactionId(rs.getLong("trustDeposit"));
         }
         
         public static boolean AddToLoan(long loanerId,
                 long loanHeightFrom, long loanBlocksDuration, long loanAmount, long loanInterest, long loanGetterId, 
-                long giveLoanTransactionId) {
+                long giveLoanTransactionId, long trustDeposit) {
         	
         	if (loanAmount <= 0) { // Don't save empty loan
                 return false;
@@ -407,8 +409,8 @@ public final class Account {
             try (Connection con = Db.db.getConnection(); 
             		PreparedStatement pstmtInsert = con.prepareStatement("INSERT INTO ACCOUNT_LOAN "
             				+" (LOAN_GETTER_ID,LOANER_ID,LOAN_AMOUNT,LOAN_INTEREST,LOAN_HEIGHT_FROM,LOAN_BLOCKS_DURATION,HEIGHT,"
-            				+" GIVING_LOAN_TRANSACTION_ID,LATEST)"
-            				+" VALUES(?,?,?,?,?,?,?,?,true)")) { // TODO: Should it always be latest? Should we keep this column?
+            				+" GIVING_LOAN_TRANSACTION_ID,trustDeposit,LATEST)"
+            				+" VALUES(?,?,?,?,?,?,?,?,?,true)")) { // TODO: Should it always be latest? Should we keep this column?
             	int i = 0;
             	pstmtInsert.setLong(++i, loanGetterId);
             	pstmtInsert.setLong(++i, loanerId);
@@ -418,6 +420,7 @@ public final class Account {
             	pstmtInsert.setLong(++i, loanBlocksDuration);
             	pstmtInsert.setLong(++i, blockchainHeight); // TODO: Is it always as loanHeightFrom???
             	pstmtInsert.setLong(++i, giveLoanTransactionId);
+                pstmtInsert.setLong(++i, trustDeposit);
             	int rowsAffected = pstmtInsert.executeUpdate();
             	if (rowsAffected != 1) {
                     Logger.logDebugMessage("Account:AddToLoan - Insert loan sql returned " + rowsAffected + " rows affected. It should be 1");
@@ -452,8 +455,8 @@ public final class Account {
         private void save(Connection con) throws SQLException {
             try (PreparedStatement pstmt = con.prepareStatement("MERGE INTO account_loan "
                     + "(LOAN_GETTER_ID, LOANER_ID, loan_amount, loan_interest, loan_height_from, "
-                    + "loan_blocks_duration, giving_loan_transaction_id ,height, latest) "
-                    + "KEY (loaner_id, height) VALUES (?, ?, ?, ?, ?, ?, ?,?,?, TRUE)")) {
+                    + "loan_blocks_duration, giving_loan_transaction_id ,height, trustDeposit, latest) "
+                    + "KEY (loaner_id, height) VALUES (?, ?, ?, ?, ?, ?, ?,?,?,?,  TRUE)")) {
                 int i = 0;
                 pstmt.setLong(++i, this.getLoanGetterId());
                 pstmt.setLong(++i, this.getLoanerId());
@@ -463,6 +466,7 @@ public final class Account {
                 DbUtils.setLongZeroToNull(pstmt, ++i, this.getLoanBlocksDuration());
                 pstmt.setLong(++i, this.getGiveLoanTransactionId());
                 pstmt.setInt(++i, Nxt.getBlockchain().getHeight());
+                DbUtils.setLongZeroToNull(pstmt, ++i, this.getTrustDeposit());
                 
                 pstmt.executeUpdate();
             }
@@ -535,9 +539,16 @@ public final class Account {
 		/**
 		 * @return the loanBlocksDuration
 		 */
-		public long getLoanBlocksDuration() {
-			return loanBlocksDuration;
+		public long getTrustDeposit() {
+			return trustDeposit;
 		}
+
+        /**
+         * @return the loanBlocksDuration
+         */
+        public long getLoanBlocksDuration() {
+            return loanBlocksDuration;
+        }
 
 		/**
 		 * @param loanBlocksDuration the loanBlocksDuration to set
@@ -2330,6 +2341,30 @@ public final class Account {
         Logger.logDebugMessage("total balance=" + String.valueOf(total));
         return total;
     }
+
+
+    public static long getBurnedTrust(long hight){
+        long total = 0;
+        try (Connection con = Db.db.getConnection()){
+            String q = "select SUM(trustDeposit) total FROM account_loan al " +
+                    "LEFT OUTER JOIN account_payback_loan apl " +
+                    "ON al.GIVING_LOAN_TRANSACTION_ID = apl.GIVING_LOAN_TRANSACTION_ID " +
+                    "where (apl.GIVING_LOAN_TRANSACTION_ID is not null) and (al.HEIGHT + al.LOAN_BLOCKS_DURATION = " + hight + " )";
+            PreparedStatement pstmtSelect = con.prepareStatement(q);
+
+            Logger.logDebugMessage("query=" + q);
+            try (ResultSet rs = pstmtSelect.executeQuery()) {
+                if (rs.next()) {
+                    total = (rs.getLong("total"));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e.toString(), e);
+        }
+        Logger.logDebugMessage("burned trust=" + String.valueOf(total));
+        return total;
+    }
+
 
     void payDividends(final long transactionId, Attachment.ColoredCoinsDividendPayment attachment) {
         long totalDividend = 0;

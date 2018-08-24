@@ -1285,13 +1285,21 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
                 List<TransactionImpl> invalidPhasedTransactions = new ArrayList<>();
                 validatePhasedTransactions(previousLastBlock.getHeight(), validPhasedTransactions, invalidPhasedTransactions, duplicates);
                 validateTransactions(block, previousLastBlock, curTime, duplicates, previousLastBlock.getHeight() >= Constants.LAST_CHECKSUM_BLOCK);
-                Logger.logDebugMessage("pushBlock: calling createTrustTrusferForBlock previousLastBlock hight= " + previousLastBlock.getHeight() + ", previousLastBlock.PayloadHash= " + Arrays.toString(previousLastBlock.getPayloadHash()));
-                Iterator<TrustTransfer> iterator = createTrustTrusferForBlock(previousLastBlock.getHeight(), previousLastBlock.getPayloadHash(), block).iterator();
-                while (iterator.hasNext()) {
-                        TrustTransfer trans = iterator.next();
+                Logger.logDebugMessage("pushBlock: calling createTrustTrusferForBlockFromDrop previousLastBlock hight= " + previousLastBlock.getHeight() + ", previousLastBlock.PayloadHash= " + Arrays.toString(previousLastBlock.getPayloadHash()) + ", block= " + block.getId());
+                Iterator<TrustTransfer> dropIterator = createTrustTrusferForBlockFromDrop(previousLastBlock.getHeight(), previousLastBlock.getPayloadHash(), block).iterator();
+                while (dropIterator.hasNext()) {
+                        TrustTransfer trans = dropIterator.next();
                         Account recipientAccount = Account.getAccount(trans.getRecipientId());
                         recipientAccount.addToTrustBalance(trans.getAmount(), trans.getAmount());
                 }
+
+                Iterator<TrustTransfer> ReturnLoanIterator = createTrustTrusferForBlockFromReturnLoans(
+                        /*block, */previousLastBlock, previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
+//                while (iterator.hasNext()) {
+//                    TrustTransfer trans = iterator.next();
+//                    Account recipientAccount = Account.getAccount(trans.getRecipientId());
+//                    recipientAccount.addToTrustBalance(trans.getAmount(), trans.getAmount());
+//                }
                 block.setPrevious(previousLastBlock);
                 blockListeners.notify(block, Event.BEFORE_BLOCK_ACCEPT);
                 TransactionProcessorImpl.getInstance().requeueAllUnconfirmedTransactions();
@@ -1639,9 +1647,10 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     }
     
     public static final int SHARDING_FACTOR = 1440;  
-    public List<TrustTransfer> createTrustTrusferForBlock(int prevHeight, byte[] blockPayloadHash, Block block) {
-    		long blockGoodInterest = block.getTotalGoodLoansInterest();
-    		long totalCoinsNQT = Account.getTotalBalanceNQT();
+
+    public List<TrustTransfer> createTrustTrusferForBlockFromDrop(int prevHeight, byte[] blockPayloadHash, Block block) {
+		long blockGoodInterest = block.getTotalGoodLoansInterest();
+		long totalCoinsNQT = Account.getTotalBalanceNQT();
         List<TrustTransfer> change_list = new ArrayList<TrustTransfer>(); 
         /* this is the most basic implementation i could think of */
         DbIterator<Account> iter = Account.iterAllPrevHeightAndShard(prevHeight, "id", SHARDING_FACTOR, blockPayloadHash);
@@ -1656,6 +1665,68 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
 	    	}
 	    	return change_list;
     }
+
+    public List<TrustTransfer> createTrustTrusferForBlockFromReturnLoans(/*Block block, */Block previousBlock, int prevHeight, byte[] blockPayloadHash) {
+
+        Map<TransactionType, Map<String, Integer>> duplicates = new HashMap<>();
+        List<TrustTransfer> change_list = new ArrayList<TrustTransfer>();
+        try (DbIterator<TransactionImpl> phasedTransactions = PhasingPoll.getFinishingTransactions(blockchain.getHeight() + 1)) {
+            for (TransactionImpl phasedTransaction : phasedTransactions) {
+                try {
+                    phasedTransaction.validate();
+                    phasedTransaction.attachmentIsDuplicate(duplicates, false); // pre-populate duplicates map
+                } catch (NxtException.ValidationException ignore) {
+                }
+            }
+        }
+
+        SortedSet<UnconfirmedTransaction> sortedTransactions = selectUnconfirmedTransactions(duplicates, previousBlock, previousBlock.getTimestamp());
+        long goodInterestNQT = 0;
+        Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans");
+        for (UnconfirmedTransaction unconfirmedTransaction : sortedTransactions) {
+            TransactionImpl transaction = unconfirmedTransaction.getTransaction();
+            TransactionType transactionType = transaction.getType();
+            if (transactionType == TransactionType.Loan.SEND_PAY_BACK_LOAN) {
+                Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                Logger.logDebugMessage("generateBlock: attachment.getLoanId(): " + attachment.getLoanId());
+                long loanInterest = getLoanInterest(attachment.getLoanId());
+                if (loanInterest < 0){
+                    Logger.logDebugMessage("generateBlock: invalid loan interest: probably transaction was not found");
+                    throw new RuntimeException("invalid loan interest");
+                }
+                else {
+                    goodInterestNQT += loanInterest;
+                }
+                Logger.logDebugMessage("generateBlock: goodInterestNQT: " + goodInterestNQT);
+            }
+        }
+
+        long burnedTrust = Account.getBurnedTrust(previousBlock.getHeight());
+        for (UnconfirmedTransaction unconfirmedTransaction : sortedTransactions) {
+            TransactionImpl transaction = unconfirmedTransaction.getTransaction();
+            TransactionType transactionType = transaction.getType();
+            if (transactionType == TransactionType.Loan.SEND_PAY_BACK_LOAN) {
+                Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                Logger.logDebugMessage("generateBlock: attachment.getLoanId(): " + attachment.getLoanId());
+                long loanInterest = getLoanInterest(attachment.getLoanId());
+
+                if (loanInterest < 0){
+                    Logger.logDebugMessage("generateBlock: invalid loan interest: probably transaction was not found");
+                    throw new RuntimeException("invalid loan interest");
+                }
+                else {
+                    long totalTrustToReturn = (loanInterest / goodInterestNQT) * burnedTrust;
+                    change_list.add(new TrustTransfer(totalTrustToReturn/2, transaction.getSenderId(), previousBlock.getHeight()));
+                    change_list.add(new TrustTransfer(totalTrustToReturn/2 + getTrustDeposit(transaction.getId()), transaction.getRecipientId(), previousBlock.getHeight()));
+                    Logger.logDebugMessage("generateBlock: totalTrustToReturn: " + totalTrustToReturn);
+                }
+            }
+        }
+
+        return change_list;
+    }
+
+
     private boolean verifyChecksum(byte[] validChecksum, int fromHeight, int toHeight) {
         MessageDigest digest = Crypto.sha256();
         try (Connection con = Db.db.getConnection();
@@ -1823,6 +1894,25 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
                 }
             }
             return loanInterest;
+        } catch (SQLException e) {
+            throw new RuntimeException(e.toString(), e);
+        }
+    }
+
+    private static long getTrustDeposit(long giveLoanTransactionId) {
+        long trustDeposit = -1;
+        Logger.logDebugMessage("getLoanInterest: giveLoanTransactionId= " + giveLoanTransactionId);
+        try(Connection con = Db.db.getConnection();
+            PreparedStatement pstmt = con.prepareStatement("SELECT * from account_loan WHERE giving_loan_transaction_id = ?")) {
+            int i = 0;
+            pstmt.setLong(++i, giveLoanTransactionId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    trustDeposit = rs.getLong("trustDeposit");
+                }
+            }
+            return trustDeposit;
         } catch (SQLException e) {
             throw new RuntimeException(e.toString(), e);
         }

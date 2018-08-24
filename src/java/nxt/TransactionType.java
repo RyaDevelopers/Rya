@@ -473,8 +473,8 @@ public abstract class TransactionType {
                 try {
                     senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
                     AccountLoan.AddToLoan(transaction.getSenderId(), (long)transaction.getHeight(), (long)attachment.getPeriod(), //TODO better casting?
-                    		transaction.getAmountNQT(), attachment.getLoanInterest(), transaction.getRecipientId(),
-                            transaction.getId());
+                    		transaction.getAmountNQT(), attachment.getLoanInterest(), (long)transaction.getRecipientId(),
+                            transaction.getId(), getTrustNeededForLoan(attachment.getLoanAmount()));
                     Logger.logDebugMessage("TransactionType:SEND_LOAN added loan to DB. transactionId="
                             + transaction.getId() + ", amount=" + attachment.getLoanAmount());
                 } catch (Exception e) {
@@ -508,7 +508,6 @@ public abstract class TransactionType {
 				//
 				Logger.logDebugMessage("TransactionType:SEND_LOAN attachment validation succeed!");
 			}
-
 		};
 
 		public static final TransactionType SEND_PAY_BACK_LOAN = new Loan() {
@@ -594,7 +593,7 @@ public abstract class TransactionType {
 
                 long loan_len = accountLoan.getLoanBlocksDuration();
 
-                long trust_gain_q = trustGain(loan_len, accountLoan.getLoanAmount() , transaction.getFeeNQT(), transaction.getBlock().getTotalFeeNQT() /* TODO add intrest */);
+                long trust_gain_q = 0; //trustGain((long)transaction.getHeight(), loan_len, accountLoan.getLoanAmount() , transaction.getFeeNQT(), transaction.getBlock().getTotalFeeNQT() /* TODO add intrest */);
                 senderAccount.addToTrustBalance(trust_gain_q/2,trust_gain_q/2);
                 recipientAccount.addToTrustBalance(getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2,
 						getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2);
