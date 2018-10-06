@@ -688,7 +688,7 @@ final class TransactionProcessorImpl implements TransactionProcessor {
                 }
 
                 if (! transaction.applyUnconfirmed()) {
-                    throw new NxtException.InsufficientBalanceException("Insufficient balance");
+                    throw new NxtException.InsufficientBalanceException(transaction.getType().applyUnconfirmedReason());
                 }
 
                 if (transaction.isUnconfirmedDuplicate(unconfirmedDuplicates)) {

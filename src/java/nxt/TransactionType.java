@@ -246,6 +246,11 @@ public abstract class TransactionType {
         }
         return true;
     }
+    
+    public String applyUnconfirmedReason() {
+    		// default unconfirmed reason. Override if needed.
+    		return "Insufficient balance";
+    }
 
     abstract boolean applyAttachmentUnconfirmed(Transaction transaction, Account senderAccount);
 
@@ -398,6 +403,12 @@ public abstract class TransactionType {
                 return true;
 			}
 			return false;
+		}
+		
+		@Override
+		public String applyUnconfirmedReason() {
+			// giving a loan will be unconfirmed due to lack of trust 
+			return this.getSubtype() == SUBTYPE_LOAN_GIVE_LOAN ? "Insufficient trust" : super.applyUnconfirmedReason();
 		}
 
 		@Override
