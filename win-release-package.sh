@@ -5,10 +5,10 @@ then
 	echo VERSION not defined
 	exit 1
 fi
-APPLICATION="ryo"
+APPLICATION="rya"
 PACKAGE=${APPLICATION}-client-${VERSION}
 echo PACKAGE="${PACKAGE}"
-CHANGELOG=ryo-client-${VERSION}.changelog.txt
+CHANGELOG=rya-client-${VERSION}.changelog.txt
 OBFUSCATE=$2
 
 FILES="changelogs conf html lib resource contrib logs"

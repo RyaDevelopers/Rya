@@ -1,5 +1,5 @@
 #!/bin/sh
-APPLICATION="ryo"
+APPLICATION="rya"
 if [ -e ~/.${APPLICATION}/nxt.pid ]; then
     PID=`cat ~/.${APPLICATION}/nxt.pid`
     ps -p $PID > /dev/null

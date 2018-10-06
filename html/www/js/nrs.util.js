@@ -1702,7 +1702,7 @@ var NRS = (function (NRS, $, undefined) {
             case "_":
                 return NRS.constants.ACCOUNT_MASK_UNDERSCORE;
             default:
-                return NRS.constants.ACCOUNT_MASK_PREFIX ? NRS.constants.ACCOUNT_MASK_PREFIX : "RYO-";
+                return NRS.constants.ACCOUNT_MASK_PREFIX ? NRS.constants.ACCOUNT_MASK_PREFIX : "RYA-";
         }
     };
 

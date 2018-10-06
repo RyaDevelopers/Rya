@@ -1,14 +1,14 @@
-# Welcome to Ryo #
+# Welcome to RYA #
 
-RYO is a proof-of-trust cryptocurrency designed as a stable monetary system in which the money market has a normal demand and supply curve and is constructed in open- source Java. Following other peer-to-peer electronic cash systems, RYO is a crypto- currency designed to be a medium of exchange that is a store of value and to embody trust. 
+RYA is a proof-of-trust cryptocurrency designed as a stable monetary system in which the money market has a normal demand and supply curve and is constructed in open- source Java. Following other peer-to-peer electronic cash systems, RYA is a crypto- currency designed to be a medium of exchange that is a store of value and to embody trust. 
 
-Unlike earlier cryptocurrencies, RYO does not use a proof-of-work model (i.e: bitcoin), a proof-of stake model (i.e: Nxt), or a proof-of-importance model (i.e: NEM). 
+Unlike earlier cryptocurrencies, RYA does not use a proof-of-work model (i.e: bitcoin), a proof-of stake model (i.e: Nxt), or a proof-of-importance model (i.e: NEM). 
 
-The model of RYO is powered by the observation that money is a kind of a social contract that is based on mutual trust. Without trust, people will refuse to be paid because they question their ability to use money to buy products and services in the future. While Blockchain provides a payment system based on cryptographic proof instead of a trusted third party such as a central bank, no cryptocurrency has succeeded so far in demonstrating the trust on which the traditional system rests. 
+The model of RYA is powered by the observation that money is a kind of a social contract that is based on mutual trust. Without trust, people will refuse to be paid because they question their ability to use money to buy products and services in the future. While Blockchain provides a payment system based on cryptographic proof instead of a trusted third party such as a central bank, no cryptocurrency has succeeded so far in demonstrating the trust on which the traditional system rests. 
 
-The proof-of-trust model, first introduced by RYO, is expected to be a fuller and more complete substitute for the Fiat currency and monetary system than any crypto-currency yet.
+The proof-of-trust model, first introduced by RYA, is expected to be a fuller and more complete substitute for the Fiat currency and monetary system than any crypto-currency yet.
 
-With Ryo you can 
+With RYA you can 
 
 - Lend and Barrow money
 - View accounts calculated credit score 

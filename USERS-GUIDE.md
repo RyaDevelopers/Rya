@@ -2,7 +2,7 @@
 # USERS GUIDE #
 
 ----
-## Why Ryo? ##
+## Why RYA? ##
 
   - Breaking Debt Monopoly
   - Perceptive Money Supply
