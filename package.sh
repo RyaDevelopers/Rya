@@ -5,7 +5,7 @@ then
 	echo VERSION not defined
 	exit 1
 fi
-APPLICATION="ryo"
+APPLICATION="rya"
 PACKAGE=${APPLICATION}-client-${VERSION}.zip
 echo PACKAGE="${PACKAGE}"
 
