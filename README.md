@@ -1,19 +1,20 @@
 # Welcome to RYA #
 
-RYA is a proof-of-trust cryptocurrency designed as a stable monetary system in which the money market has a normal demand and supply curve and is constructed in open- source Java. Following other peer-to-peer electronic cash systems, RYA is a crypto- currency designed to be a medium of exchange that is a store of value and to embody trust. 
+Rya is a cryptocurrency and monetary system designed to be both a store of value and a medium of exchange. Using a free, decentralized monetary market, the Rya system tethers money supply to credit without the need for a monopolistic regulatory institution. Money supply is adjusted dynamically depending on economic cycles making for a better medium of exchange. Rya and its Proof of Trust (PoT) model is therefore expected to be a fuller and more complete substitute for Fiat monetary systems than any cryptocurrency yet.
 
-Unlike earlier cryptocurrencies, RYA does not use a proof-of-work model (i.e: bitcoin), a proof-of stake model (i.e: Nxt), or a proof-of-importance model (i.e: NEM). 
+Participance with the Rya blockchain unables: 
 
-The model of RYA is powered by the observation that money is a kind of a social contract that is based on mutual trust. Without trust, people will refuse to be paid because they question their ability to use money to buy products and services in the future. While Blockchain provides a payment system based on cryptographic proof instead of a trusted third party such as a central bank, no cryptocurrency has succeeded so far in demonstrating the trust on which the traditional system rests. 
+Lend and Barrow money
+View accounts calculated credit score
+Calculate local and global interest rates
 
-The proof-of-trust model, first introduced by RYA, is expected to be a fuller and more complete substitute for the Fiat currency and monetary system than any crypto-currency yet.
 
-With RYA you can 
+Read more about Rya vision here: https://ryacoin.io/WP/RyoWhitepaper.pdf
 
-- Lend and Barrow money
-- View accounts calculated credit score 
-- Calculate local and global interest rates 
-   
+This Rya code is a fork from NXT project: https://bitbucket.org/Jelurida/nxt-clone-starter
+
+Jelurida lisence is attached.
+
 ----
 ## Get it! ##
 
@@ -30,7 +31,7 @@ With RYA you can
 ----
 ## Run it! ##
 
-  - click on the Nxt icon, or start from the command line:
+  - click on the Rya icon, or start from the command line:
   - Unix: `./start.sh`
   - Mac: `./run.command`
   - Window: `run.bat`
@@ -81,18 +82,18 @@ The only testnet peer you will have in your wallet from now on is the above test
     - Stop the current testnet running node
         - Run: "ps -fC java" , it will print out the java process id (pid)
         - Kill the java process but run: "kill -9 <java pid>"
-        - Rename the current "nxt" directoy so if something will go wrong you will still have a restore point to go back to.
+        - Rename the current "rya" directoy so if something will go wrong you will still have a restore point to go back to.
     - Start the new testnet node
         - Transfer the zip file into the root directory of the linux cmd that was just opened
-        - Unzip the zip file into a new "nxt" directory
-        - Run: cd ~/nxt
+        - Unzip the zip file into a new "rya" directory
+        - Run: cd ~/rya
         - Run: nohup ./run.sh &
         - Run: exit
     - Validate your node is functioning well:
-        - Once you run the run.sh command you will be notify that a log file was opened in the name of nohup.out, make sure you have no exceptions there and it includes the line "Nxt server <version> started successfully."
+        - Once you run the run.sh command you will be notify that a log file was opened in the name of nohup.out, make sure you have no exceptions there and it includes the line "Rya server <version> started successfully."
         - Notify the team you have upgraded the testnet node.
   -  What shell I do if i had to restart the testnet VM:
-      - Change the deafultTestnetPeers value in <testnet VM root>\conf\nxt-default.properties to have the new external IP and restart the node (section 3 and then 4 with the same node).
+      - Change the deafultTestnetPeers value in <testnet VM root>\conf\rya-default.properties to have the new external IP and restart the node (section 3 and then 4 with the same node).
       - Commit the same change into our repository.
       - Let everyone know you have done it and they must get your latest commit and rerun their node to use the testnet peer that have new IP now.
 ----
