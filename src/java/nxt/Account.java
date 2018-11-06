@@ -883,6 +883,15 @@ public final class Account {
 
     };
 
+    private static final DbKey.LongKeyFactory<AccountPaybackLoan> accountPaybackLoanDbKeyFactory = new DbKey.LongKeyFactory<AccountPaybackLoan>("payback_loan_transaction_id") {
+
+        @Override
+        public DbKey newKey(AccountPaybackLoan accountPaybackLoan) {
+            return accountPaybackLoan.dbKey == null ? newKey(accountPaybackLoan.paybackLoanTransactionId) : accountPaybackLoan.dbKey;
+        }
+
+    };
+
     private static final VersionedEntityDbTable<AccountLease> accountLeaseTable = new VersionedEntityDbTable<AccountLease>("account_lease",
             accountLeaseDbKeyFactory) {
 
@@ -974,6 +983,20 @@ public final class Account {
         	accountLoan.save(con);
         }
     };
+
+    private static final VersionedEntityDbTable<AccountPaybackLoan> accountPaybackLoan = new VersionedEntityDbTable<AccountPaybackLoan>("account_payback_loan", accountPaybackLoanDbKeyFactory) {
+
+        @Override
+        protected AccountPaybackLoan load(Connection con, ResultSet rs, DbKey dbKey) throws SQLException {
+            return new AccountPaybackLoan(rs, dbKey);
+        }
+
+        @Override
+        protected void save(Connection con, AccountPaybackLoan accountPaybackLoan) throws SQLException {
+            accountPaybackLoan.save(con);
+        }
+    };
+
 
     private static final VersionedEntityDbTable<AccountAsset> accountAssetTable = new VersionedEntityDbTable<AccountAsset>("account_asset", accountAssetDbKeyFactory) {
 
