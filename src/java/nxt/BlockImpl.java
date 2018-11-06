@@ -156,7 +156,8 @@ final class BlockImpl implements Block {
     public long getTotalGoodLoansInterest() {
     		long totalInterest = 0;
     		for (TransactionImpl transaction : blockTransactions) {
-    			if (transaction.getType().getSubtype() == TransactionType.Loan.SEND_PAY_BACK_LOAN.getSubtype()) {
+                TransactionType transactionType = transaction.getType();
+    		    if (transactionType == TransactionType.Loan.SEND_PAY_BACK_LOAN) {
     				Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
     				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
     				totalInterest += accountLoan.getLoanInterest();

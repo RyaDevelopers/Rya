@@ -394,7 +394,7 @@ public final class Account {
             this.setLoanInterest(rs.getLong("LOAN_INTEREST"));
             this.loanGetterId = rs.getLong("LOAN_GETTER_ID");
             this.setGiveLoanTransactionId(rs.getLong("giving_loan_transaction_id"));
-            this.setGiveLoanTransactionId(rs.getLong("trustDeposit"));
+            this.setTrustDeposit(rs.getLong("trustDeposit"));
         }
         
         public static boolean AddToLoan(long loanerId,
@@ -543,6 +543,10 @@ public final class Account {
 		public long getTrustDeposit() {
 			return trustDeposit;
 		}
+
+        public void setTrustDeposit(long trustDeposit) {
+            this.trustDeposit = trustDeposit;
+        }
 
         /**
          * @return the loanBlocksDuration
@@ -879,6 +883,15 @@ public final class Account {
 
     };
 
+    private static final DbKey.LongKeyFactory<AccountPaybackLoan> accountPaybackLoanDbKeyFactory = new DbKey.LongKeyFactory<AccountPaybackLoan>("payback_loan_transaction_id") {
+
+        @Override
+        public DbKey newKey(AccountPaybackLoan accountPaybackLoan) {
+            return accountPaybackLoan.dbKey == null ? newKey(accountPaybackLoan.paybackLoanTransactionId) : accountPaybackLoan.dbKey;
+        }
+
+    };
+
     private static final VersionedEntityDbTable<AccountLease> accountLeaseTable = new VersionedEntityDbTable<AccountLease>("account_lease",
             accountLeaseDbKeyFactory) {
 
@@ -970,6 +983,20 @@ public final class Account {
         	accountLoan.save(con);
         }
     };
+
+    private static final VersionedEntityDbTable<AccountPaybackLoan> accountPaybackLoan = new VersionedEntityDbTable<AccountPaybackLoan>("account_payback_loan", accountPaybackLoanDbKeyFactory) {
+
+        @Override
+        protected AccountPaybackLoan load(Connection con, ResultSet rs, DbKey dbKey) throws SQLException {
+            return new AccountPaybackLoan(rs, dbKey);
+        }
+
+        @Override
+        protected void save(Connection con, AccountPaybackLoan accountPaybackLoan) throws SQLException {
+            accountPaybackLoan.save(con);
+        }
+    };
+
 
     private static final VersionedEntityDbTable<AccountAsset> accountAssetTable = new VersionedEntityDbTable<AccountAsset>("account_asset", accountAssetDbKeyFactory) {
 
@@ -2008,8 +2035,8 @@ public final class Account {
             trustUnconfirmedBalance = Math.addExact(trustUnconfirmedBalance, quantityUnconfirmed);
 
 
-            Logger.logDebugMessage("for id="+String.valueOf(this.id)+" adding "+String.valueOf(quantityConfirmed)+
-                    " now "+String.valueOf(trustBalance) +  "adding to unconfirmes " +String.valueOf(quantityUnconfirmed)
+            Logger.logDebugMessage("for id="+String.valueOf(this.id)+" with confirmed trust " + (trustBalance - quantityConfirmed) + " adding "+String.valueOf(quantityConfirmed)+
+                    " now "+String.valueOf(trustBalance) +  " and with unconfirmed trust of " + (trustUnconfirmedBalance - quantityUnconfirmed) + " adding to unconfirmed " +String.valueOf(quantityUnconfirmed)
                     + " now " + String.valueOf(trustUnconfirmedBalance));
 
             if (accountTrust == null) {
@@ -2311,11 +2338,18 @@ public final class Account {
         }
     }
 
-    public static long getTotalTrust(){
+    public static long getBurnedTrust(long height){
         long total = 0;
         try (Connection con = Db.db.getConnection()){
-            PreparedStatement pstmtSelect = con.prepareStatement("SELECT sum(UNITS) total FROM account_trust where latest=TRUE and UNITS > 0");
-           try (ResultSet rs = pstmtSelect.executeQuery()) {
+            String q = "select SUM(trustDeposit) total FROM account_loan al " +
+                    "LEFT OUTER JOIN account_payback_loan apl " +
+                    "ON al.GIVING_LOAN_TRANSACTION_ID = apl.GIVING_LOAN_TRANSACTION_ID " +
+                    "where al.HEIGHT + al.LOAN_BLOCKS_DURATION = " + (height - 1);
+            //"where al.HEIGHT + al.LOAN_BLOCKS_DURATION >= " + (height - 1 - 3) + " and al.HEIGHT + al.LOAN_BLOCKS_DURATION <= " + (height - 1 + 3); - for debugging puspose only
+            PreparedStatement pstmtSelect = con.prepareStatement(q);
+
+            Logger.logDebugMessage("query=" + q);
+            try (ResultSet rs = pstmtSelect.executeQuery()) {
                 if (rs.next()) {
                     total = (rs.getLong("total"));
                 }
@@ -2323,7 +2357,7 @@ public final class Account {
         } catch (SQLException e) {
             throw new RuntimeException(e.toString(), e);
         }
-        Logger.logDebugMessage("total trust=" + String.valueOf(total));
+        Logger.logDebugMessage("burned trust=" + String.valueOf(total));
         return total;
     }
 
@@ -2340,29 +2374,6 @@ public final class Account {
             throw new RuntimeException(e.toString(), e);
         }
         Logger.logDebugMessage("total balance=" + String.valueOf(total));
-        return total;
-    }
-
-
-    public static long getBurnedTrust(long hight){
-        long total = 0;
-        try (Connection con = Db.db.getConnection()){
-            String q = "select SUM(trustDeposit) total FROM account_loan al " +
-                    "LEFT OUTER JOIN account_payback_loan apl " +
-                    "ON al.GIVING_LOAN_TRANSACTION_ID = apl.GIVING_LOAN_TRANSACTION_ID " +
-                    "where (apl.GIVING_LOAN_TRANSACTION_ID is not null) and (al.HEIGHT + al.LOAN_BLOCKS_DURATION = " + hight + " )";
-            PreparedStatement pstmtSelect = con.prepareStatement(q);
-
-            Logger.logDebugMessage("query=" + q);
-            try (ResultSet rs = pstmtSelect.executeQuery()) {
-                if (rs.next()) {
-                    total = (rs.getLong("total"));
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e.toString(), e);
-        }
-        Logger.logDebugMessage("burned trust=" + String.valueOf(total));
         return total;
     }
 

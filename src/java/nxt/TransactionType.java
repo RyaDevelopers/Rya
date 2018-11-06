@@ -17,6 +17,7 @@
 
 package nxt;
 
+import nxt.db.DbIterator;
 import nxt.Account.AccountLoan;
 import nxt.Account.AccountPaybackLoan;
 import nxt.Account.ControlType;
@@ -33,7 +34,9 @@ import org.json.simple.JSONObject;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.text.DecimalFormat;
@@ -376,31 +379,24 @@ public abstract class TransactionType {
 
 
 		long getTrustNeededForLoan(long amount_nqt) {
-			BigInteger totalTrust = BigInteger.valueOf(Account.getTotalTrust());
-                BigInteger totalBalance = BigInteger.valueOf(Account.getTotalBalanceNQT());
-            BigInteger amount_nqt_big = BigInteger.valueOf(amount_nqt);
-
-            long res = Long.valueOf(((amount_nqt_big.multiply(totalTrust))).divide(totalBalance).toString());
-
-			Logger.logDebugMessage("getTrustNeededForLoan res=" +
-					String.valueOf(res)+ " total_trust="
-					+ String.valueOf(Account.getTotalTrust()) + " total_balance="
-					+ String.valueOf( Account.getTotalBalanceNQT()));
-
-			return res;
+			return amount_nqt / 10;
 		}
 
 		@Override
 		final boolean applyAttachmentUnconfirmed(Transaction transaction, Account senderAccount) {
             if (getSubtype() == TransactionType.SUBTYPE_LOAN_GIVE_LOAN) {
                 Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
-                Logger.logDebugMessage("applyig LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
-                if (senderAccount.getUnconfirmedTrustQ() >= getTrustNeededForLoan(attachment.getLoanAmount())) {
-                    senderAccount.addToTrustBalance(0, -getTrustNeededForLoan(attachment.getLoanAmount()));
+                Logger.logDebugMessage("class Loan - applyAttachmentUnconfirmed: applyig LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
+                long trustNeededForLoan = getTrustNeededForLoan(attachment.getLoanAmount());
+                long unconfirmedTrust = senderAccount.getUnconfirmedTrustQ();
+                Logger.logDebugMessage("class Loan - applyAttachmentUnconfirmed: trustNeededForLoan = " + trustNeededForLoan);
+                Logger.logDebugMessage("class Loan - applyAttachmentUnconfirmed: unconfirmedTrust = " + unconfirmedTrust);
+                if (unconfirmedTrust >= trustNeededForLoan) {
+                    senderAccount.addToTrustBalance(0, -trustNeededForLoan);
                     return true;
 				}
 			} else {
-                Logger.logDebugMessage("applyAttachmentUnconfirmed : payback loan, do nothing");
+                Logger.logDebugMessage("class Loan - applyAttachmentUnconfirmed : payback loan, do nothing");
                 return true;
 			}
 			return false;
@@ -416,10 +412,12 @@ public abstract class TransactionType {
 		final void undoAttachmentUnconfirmed(Transaction transaction, Account senderAccount) {
 			if (getSubtype() == TransactionType.SUBTYPE_LOAN_GIVE_LOAN) {
 				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
-				Logger.logDebugMessage("undoAttachmentUnconfirmed LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
-				senderAccount.addToTrustBalance(0, getTrustNeededForLoan(attachment.getLoanAmount()));
+				Logger.logDebugMessage("class Loan - undoAttachmentUnconfirmed: LOAN_GIVE amount " + String.valueOf(attachment.getLoanAmount()));
+                long trustNeededForLoan = getTrustNeededForLoan(attachment.getLoanAmount());
+                Logger.logDebugMessage("class Loan - undoAttachmentUnconfirmed: trustNeededForLoan = " + trustNeededForLoan);
+				senderAccount.addToTrustBalance(0, trustNeededForLoan);
 			} else {
-                Logger.logDebugMessage("undoAttachmentUnconfirmed : payback loan, do nothing");
+                Logger.logDebugMessage("class Loan - undoAttachmentUnconfirmed : payback loan, do nothing");
 			}
 		}
 
@@ -439,7 +437,7 @@ public abstract class TransactionType {
                 @Override
                 public int getSize(TransactionImpl transaction, Appendix appendage) {
                     Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
-                    Logger.logDebugMessage("calc fee, loan size: %d", attachment.getLoanAmount());
+                    Logger.logDebugMessage("SEND_LOAN - calc fee, loan size: %d", attachment.getLoanAmount());
                     return (int)((attachment.getLoanAmount() + attachment.getLoanInterest()) / ONE_NXT);
                 }
             };
@@ -478,16 +476,19 @@ public abstract class TransactionType {
 
 			@Override
             final void applyAttachment(Transaction transaction, Account senderAccount, Account recipientAccount) {
-                Logger.logDebugMessage("TransactionType:Loan apply attachment");
+                Logger.logDebugMessage("SEND_LOAN - applyAttachment: TransactionType:Loan apply attachment");
 
-                Logger.logDebugMessage("TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
+                Logger.logDebugMessage("SEND_LOAN - applyAttachment: TransactionSubType:SUBTYPE_LOAN_GIVE_LOAN: transaction.getHeight() = " + transaction.getHeight());
                 Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
                 try {
-                    senderAccount.addToTrustBalance(-getTrustNeededForLoan(attachment.getLoanAmount()), 0);
+                    long trustNeededForLoan = getTrustNeededForLoan(attachment.getLoanAmount());
+                    Logger.logDebugMessage("SEND_LOAN - applyAttachment: trustNeededForLoan = " + trustNeededForLoan);
+
+                    senderAccount.addToTrustBalance(-trustNeededForLoan, 0);
                     AccountLoan.AddToLoan(transaction.getSenderId(), (long)transaction.getHeight(), (long)attachment.getPeriod(), //TODO better casting?
                     		transaction.getAmountNQT(), attachment.getLoanInterest(), (long)transaction.getRecipientId(),
-                            transaction.getId(), getTrustNeededForLoan(attachment.getLoanAmount()));
-                    Logger.logDebugMessage("TransactionType:SEND_LOAN added loan to DB. transactionId="
+                            transaction.getId(), trustNeededForLoan);
+                    Logger.logDebugMessage("SEND_LOAN - applyAttachment: TransactionType:SEND_LOAN added loan to DB. transactionId="
                             + transaction.getId() + ", amount=" + attachment.getLoanAmount());
                 } catch (Exception e) {
                     // TODO: handle exception
@@ -497,9 +498,9 @@ public abstract class TransactionType {
 
 			@Override
 			void validateAttachment(Transaction transaction) throws NxtException.ValidationException {
-				Logger.logDebugMessage("TransactionType:SEND_LOAN validating attachment " + transaction.getAmountNQT() );
+				Logger.logDebugMessage("SEND_LOAN - validateAttachment: TransactionType:SEND_LOAN validating attachment " + transaction.getAmountNQT() );
 				Attachment.Loan attachment = (Attachment.Loan) transaction.getAttachment();
-				Logger.logDebugMessage("TransactionType:SEND_LOAN  attachment " +  attachment.getLoanAmount() + " " + attachment.getPeriod());
+				Logger.logDebugMessage("SEND_LOAN - validateAttachment: TransactionType:SEND_LOAN  attachment " +  attachment.getLoanAmount() + " " + attachment.getPeriod());
 				if (transaction.getAmountNQT() <= 0 || transaction.getAmountNQT() >= Constants.MAX_BALANCE_NQT) {
 					throw new NxtException.NotValidException("Invalid loan payment");
 				}
@@ -518,7 +519,7 @@ public abstract class TransactionType {
 
 				// need more validations, neet to validate the return amount is the same as the give loan amount
 				//
-				Logger.logDebugMessage("TransactionType:SEND_LOAN attachment validation succeed!");
+				Logger.logDebugMessage("SEND_LOAN - TransactionType:SEND_LOAN attachment validation succeed!");
 			}
 		};
 
@@ -560,64 +561,39 @@ public abstract class TransactionType {
 				return  (fees_and_intrests_in_block * trustQ/total_trust);
 			}
 
-
-			long lostFromCoins(long blocks, long amoutNQT, long fees_and_intrests_in_block) {
-				long total_amount = amoutNQT;
-				long total_trust = 0;
-                long trust_in_system = Account.getTotalTrust();
-                long coins_in_system = Account.getTotalBalanceNQT();
-				for (int i =0; i < blocks; i++) {
-					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block, trust_in_system);
-					total_trust += trustRevFromCoins(total_amount, coins_in_system);
-				}
-				return total_trust;
-			}
-
-			long lostFromTrust(long blocks, long trustQ, long fees_and_intrests_in_block) {
-				long total_amount = 0;
-				long total_trust = trustQ;
-                long trust_in_system = Account.getTotalTrust();
-                long coins_in_system = Account.getTotalBalanceNQT();
-				for (int i =0; i < blocks; i++) {
-					total_amount += coinsRevFromTrust(total_trust, fees_and_intrests_in_block, trust_in_system);
-					total_trust += trustRevFromCoins(total_amount, coins_in_system);
-				}
-				return total_trust + lostFromCoins(blocks, total_amount, fees_and_intrests_in_block);
-			}
-
-			long trustGain(long loanLenght, long loan_amount, long loan_fee, long fees_and_intrests_in_block) {
-				long trust_for_loan = getTrustNeededForLoan(loan_amount);
-				return lostFromCoins(loanLenght, loan_amount, fees_and_intrests_in_block) +
-						lostFromCoins(loanLenght, loan_fee, fees_and_intrests_in_block) +
-						lostFromTrust(loanLenght, trust_for_loan, fees_and_intrests_in_block);
-			}
-
 			@Override
             final void applyAttachment(Transaction transaction, Account senderAccount, Account recipientAccount) {
-                Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started apply attachment");
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started apply attachment");
                 Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
                 long loanId = attachment.getLoanId();
                 long paybackLoanTransactionId = transaction.getId();
-                Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
                 AccountPaybackLoan.AddToPayBackLoan(paybackLoanTransactionId, loanId);
 
                 AccountLoan accountLoan = AccountLoan.GetLoan(loanId);
 
                 long loan_len = accountLoan.getLoanBlocksDuration();
 
-                long trust_gain_q = 0; //trustGain((long)transaction.getHeight(), loan_len, accountLoan.getLoanAmount() , transaction.getFeeNQT(), transaction.getBlock().getTotalFeeNQT() /* TODO add intrest */);
-                senderAccount.addToTrustBalance(trust_gain_q/2,trust_gain_q/2);
-                recipientAccount.addToTrustBalance(getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2,
-						getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2);
+                //long trust_gain_q = 0; //trustGain((long)transaction.getHeight(), loan_len, accountLoan.getLoanAmount() , transaction.getFeeNQT(), transaction.getBlock().getTotalFeeNQT() /* TODO add intrest */);
+
+                //senderAccount.addToTrustBalance(trust_gain_q/2,trust_gain_q/2);
+                //recipientAccount.addToTrustBalance(getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2,
+				//		getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2);
+
+
+                addBurnedTrust(transaction);
+                long trustDeposit = accountLoan.getTrustDeposit();
+                Logger.logDebugMessage("applyAttachment: trustDeposit = " + trustDeposit);
+                recipientAccount.addToTrustBalance(trustDeposit, trustDeposit);
                 Logger.logDebugMessage("applyAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN succeeded, PaybackLoanTransactionId="+ paybackLoanTransactionId + ", loanId()=" + loanId);
             }
 
 			@Override
 			void validateAttachment(Transaction transaction) throws NxtException.ValidationException {
-                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started validateAttachment");
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN started validateAttachment");
                 Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
                 long loanId = attachment.getLoanId();
-                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, loanId()=" + loanId);
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN, loanId()=" + loanId);
 
 
 				AccountLoan accountLoan = AccountLoan.GetLoan(attachment.getLoanId());
@@ -627,19 +603,20 @@ public abstract class TransactionType {
                 }
 
                 long loanerId= accountLoan.getLoanerId();
-                Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN loanerId = " + loanerId);
-                Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getRecipientId() = " + transaction.getRecipientId());
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - TransactionType:SEND_PAY_BACK_LOAN loanerId = " + loanerId);
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - TransactionType:SEND_PAY_BACK_LOAN transaction.getRecipientId() = " + transaction.getRecipientId());
                 
                 if (loanerId != transaction.getRecipientId()) {
                     throw new NxtException.NotValidException("Incorrect recipient id - recepient must be the loaner");
                 }
 
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanBlocksDuration() = " + accountLoan.getLoanBlocksDuration());
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanAmount() = " + attachment.getPayBackLoanAmount());
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN accountLoan.getLoanAmount() = " + accountLoan.getLoanAmount());
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN attachment.getPayBackLoanFee() = " + attachment.getPayBackLoanFee());
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN Nxt.getBlockchain().getHeight() = " + Nxt.getBlockchain().getHeight());
-				Logger.logDebugMessage("TransactionType:SEND_PAY_BACK_LOAN transaction.getAmountNQT() = " + transaction.getAmountNQT());
+				Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: accountLoan.getLoanBlocksDuration() = " + accountLoan.getLoanBlocksDuration());
+				Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: attachment.getPayBackLoanAmount() = " + attachment.getPayBackLoanAmount());
+				Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: accountLoan.getLoanAmount() = " + accountLoan.getLoanAmount());
+				Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: attachment.getPayBackLoanFee() = " + attachment.getPayBackLoanFee());
+				Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: Nxt.getBlockchain().getHeight() = " + Nxt.getBlockchain().getHeight());
+				Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: transaction.getAmountNQT() = " + transaction.getAmountNQT());
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: transaction.getecBlockId() = " + transaction.getECBlockId());
 
 				if(AccountPaybackLoan.IsLoanWasPayedBack(loanId)) {
 					throw new NxtException.NotValidException("Invalid return loan: invalid return loan id, this loan was already payed back");
@@ -665,14 +642,102 @@ public abstract class TransactionType {
                             format.format(loanAmount_nxt),
                             format.format(interest_nxt)));
 				}
-                Logger.logDebugMessage("validateAttachment: TransactionType:Loan SUBTYPE_LOAN_RETURN_LOAN succeeded, loanId()=" + loanId);
+                Logger.logDebugMessage("SEND_PAY_BACK_LOAN - validateAttachment: succeeded, loanId()=" + loanId);
 			}
 
 			public long getLoanInterest(long loanId) {
 				AccountLoan accountLoan = AccountLoan.GetLoan(loanId);
 				return accountLoan.getLoanInterest();
 			}
-		};
+
+			private void addBurnedTrust(Transaction transaction)
+            {
+                int curTime = Nxt.getEpochTime();
+
+                //blockchain.writeLock();
+
+                Block previousLastBlock = null;
+
+                previousLastBlock = transaction.getBlock();
+
+                Iterator<TrustTransfer> ReturnLoanIterator = createTrustTrusferForBlockFromReturnLoans(
+                        /*block, */previousLastBlock, previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
+                while (ReturnLoanIterator.hasNext()) {
+                    TrustTransfer trans = ReturnLoanIterator.next();
+                    Logger.logDebugMessage("addBurnedTrust: ReturnLoanIterator receipientId = " + trans.getRecipientId() + ", height = " + trans.getHeight()+ ", amount = " + trans.getAmount());
+                    Account recipientAccount = Account.getAccount(trans.getRecipientId());
+                    recipientAccount.addToTrustBalance(trans.getAmount(), trans.getAmount());
+                }
+            }
+
+            private List<TrustTransfer> createTrustTrusferForBlockFromReturnLoans(/*Block block, */Block previousBlock, int prevHeight, byte[] blockPayloadHash) {
+
+                Map<TransactionType, Map<String, Integer>> duplicates = new HashMap<>();
+                List<TrustTransfer> change_list = new ArrayList<TrustTransfer>();
+                try (DbIterator<TransactionImpl> phasedTransactions = PhasingPoll.getFinishingTransactions(Nxt.getBlockchain().getHeight() + 1)) {
+                    for (TransactionImpl phasedTransaction : phasedTransactions) {
+                        try {
+                            phasedTransaction.validate();
+                            phasedTransaction.attachmentIsDuplicate(duplicates, false); // pre-populate duplicates map
+                        } catch (NxtException.ValidationException ignore) {
+                        }
+                    }
+                }
+
+                long goodInterestNQT = 0;
+                Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans");
+                for (Transaction transaction : previousBlock.getTransactions()) {
+                    TransactionType transactionType = transaction.getType();
+                    if (transactionType == TransactionType.Loan.SEND_PAY_BACK_LOAN) {
+                        Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                        Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: attachment.getLoanId(): " + attachment.getLoanId());
+                        long loanInterest = getLoanInterest(attachment.getLoanId());
+                        if (loanInterest < 0){
+                            Logger.logDebugMessage("generateBlock: invalid loan interest: probably transaction was not found");
+                            throw new RuntimeException("invalid loan interest");
+                        }
+                        else {
+                            goodInterestNQT += loanInterest;
+                        }
+                        Logger.logDebugMessage("generateBlock: goodInterestNQT: " + goodInterestNQT);
+                    }
+                }
+
+                long burnedTrust = Account.getBurnedTrust(previousBlock.getHeight());
+                long numOfTransactions = previousBlock.getTransactions().size();
+                Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: previousBlockHeight = " + previousBlock.getHeight() + " numOfTransactions = " + numOfTransactions);
+                for (Transaction transaction : previousBlock.getTransactions()) {
+                    TransactionType transactionType = transaction.getType();
+                    Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: transactionType = " + transactionType + "transactionId = " + transaction.getId());
+                    if (transactionType == TransactionType.Loan.SEND_PAY_BACK_LOAN) {
+                        Attachment.PayBackLoan attachment = (Attachment.PayBackLoan) transaction.getAttachment();
+                        Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: attachment.getLoanId() = " + attachment.getLoanId());
+                        long loanInterest = getLoanInterest(attachment.getLoanId());
+                        Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: loanInterest = " + loanInterest);
+                        if (loanInterest < 0){
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: invalid loan interest: probably transaction was not found");
+                            throw new RuntimeException("invalid loan interest");
+                        }
+                        else {
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: loanInterest = " + loanInterest);
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: goodInterestNQT = " + goodInterestNQT);
+                            long totalTrustToReturn = (loanInterest / goodInterestNQT) * burnedTrust;
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: totalTrustToReturn = " + totalTrustToReturn);
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: transaction.getSenderId() = " + transaction.getSenderId());
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: transaction.getRecipientId() = " + transaction.getRecipientId());
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: previousBlock.getHeight() = " + previousBlock.getHeight());
+                            change_list.add(new TrustTransfer(totalTrustToReturn/2, transaction.getSenderId(), previousBlock.getHeight()));
+                            change_list.add(new TrustTransfer(totalTrustToReturn/2, transaction.getRecipientId(), previousBlock.getHeight()));
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: transaction.getSenderId() = " + transaction.getSenderId() + " totalTrustToReturn/2: " + totalTrustToReturn/2);
+                            Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: transaction.getRecipientId() = " + transaction.getRecipientId() + " totalTrustToReturn/2 + trustDeposit: " + totalTrustToReturn/2);
+                        }
+                    }
+                }
+
+                return change_list;
+            }
+
+        };
 	}
 
     public static abstract class Payment extends TransactionType {
