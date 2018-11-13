@@ -1638,7 +1638,11 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
     
     private static final long blocksPerYear = 525600;
     public static long trustFromCoins(long blocks, long amountNQT, long blockGoodInterest, long totalCoinsNQT) {
-        return (((amountNQT / totalCoinsNQT * blockGoodInterest) * blocks)/ blocksPerYear);
+        // (((amountNQT / totalCoinsNQT * blockGoodInterest) * blocks)/ blocksPerYear);
+        BigInteger total_rev,res;
+        total_rev = BigInteger.valueOf(amountNQT).multiply(BigInteger.valueOf(blockGoodInterest).multiply(BigInteger.valueOf(blocks)));
+        res = (total_rev.divide(BigInteger.valueOf(totalCoinsNQT))).divide(BigInteger.valueOf(blocks));
+        return res.longValue();
     }
     
     public static final int SHARDING_FACTOR = 1440;  
