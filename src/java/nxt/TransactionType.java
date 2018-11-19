@@ -572,15 +572,6 @@ public abstract class TransactionType {
 
                 AccountLoan accountLoan = AccountLoan.GetLoan(loanId);
 
-                long loan_len = accountLoan.getLoanBlocksDuration();
-
-                //long trust_gain_q = 0; //trustGain((long)transaction.getHeight(), loan_len, accountLoan.getLoanAmount() , transaction.getFeeNQT(), transaction.getBlock().getTotalFeeNQT() /* TODO add intrest */);
-
-                //senderAccount.addToTrustBalance(trust_gain_q/2,trust_gain_q/2);
-                //recipientAccount.addToTrustBalance(getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2,
-				//		getTrustNeededForLoan(accountLoan.getLoanAmount()) + trust_gain_q/2);
-
-
                 addBurnedTrust(transaction);
                 long trustDeposit = accountLoan.getTrustDeposit();
                 Logger.logDebugMessage("applyAttachment: trustDeposit = " + trustDeposit);
@@ -654,19 +645,20 @@ public abstract class TransactionType {
             {
                 int curTime = Nxt.getEpochTime();
 
-                //blockchain.writeLock();
-
                 Block previousLastBlock = null;
 
                 previousLastBlock = transaction.getBlock();
-
-                Iterator<TrustTransfer> ReturnLoanIterator = createTrustTrusferForBlockFromReturnLoans(
-                        /*block, */previousLastBlock, previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
-                while (ReturnLoanIterator.hasNext()) {
-                    TrustTransfer trans = ReturnLoanIterator.next();
-                    Logger.logDebugMessage("addBurnedTrust: ReturnLoanIterator receipientId = " + trans.getRecipientId() + ", height = " + trans.getHeight()+ ", amount = " + trans.getAmount());
-                    Account recipientAccount = Account.getAccount(trans.getRecipientId());
-                    recipientAccount.addToTrustBalance(trans.getAmount(), trans.getAmount());
+                if (previousLastBlock.needPostProccess()) {
+                    Iterator<TrustTransfer> ReturnLoanIterator = createTrustTrusferForBlockFromReturnLoans(previousLastBlock, previousLastBlock.getHeight(), previousLastBlock.getPayloadHash()).iterator();
+                    while (ReturnLoanIterator.hasNext()) {
+                        TrustTransfer trans = ReturnLoanIterator.next();
+                        Logger.logDebugMessage("addBurnedTrust: ReturnLoanIterator receipientId = " + trans.getRecipientId() + ", height = " + trans.getHeight() + ", amount = " + trans.getAmount());
+                        Account recipientAccount = Account.getAccount(trans.getRecipientId());
+                        recipientAccount.addToTrustBalance(trans.getAmount(), trans.getAmount());
+                    }
+                    previousLastBlock.SetNeedPostProccess(false);
+                } else {
+                    Logger.logDebugMessage("skipping addBurnedTrust: height = " + transaction.getHeight());
                 }
             }
 
@@ -721,7 +713,13 @@ public abstract class TransactionType {
                         else {
                             Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: loanInterest = " + loanInterest);
                             Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: goodInterestNQT = " + goodInterestNQT);
-                            long totalTrustToReturn = (loanInterest / goodInterestNQT) * burnedTrust;
+                            // totalTrustToReturn = (loanInterest / goodInterestNQT) * burnedTrust;
+
+                            BigInteger total_rev,res;
+                            total_rev = BigInteger.valueOf(loanInterest).multiply(BigInteger.valueOf(burnedTrust));
+                            res = total_rev.divide(BigInteger.valueOf(goodInterestNQT));
+                            long totalTrustToReturn =  res.longValue();
+
                             Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: totalTrustToReturn = " + totalTrustToReturn);
                             Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: transaction.getSenderId() = " + transaction.getSenderId());
                             Logger.logDebugMessage("createTrustTrusferForBlockFromReturnLoans: transaction.getRecipientId() = " + transaction.getRecipientId());

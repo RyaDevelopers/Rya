@@ -70,4 +70,7 @@ public interface Block {
 
     JSONObject getJSONObject();
 
+    boolean needPostProccess();
+
+    void SetNeedPostProccess(boolean need);
 }

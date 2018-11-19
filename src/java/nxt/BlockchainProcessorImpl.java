@@ -1468,6 +1468,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
             validPhasedTransactions.forEach(transaction -> transaction.getPhasing().countVotes(transaction));
             invalidPhasedTransactions.forEach(transaction -> transaction.getPhasing().reject(transaction));
             int fromTimestamp = Nxt.getEpochTime() - Constants.MAX_PRUNABLE_LIFETIME;
+            block.SetNeedPostProccess(true);
             for (TransactionImpl transaction : block.getTransactions()) {
                 try {
                     transaction.apply();
