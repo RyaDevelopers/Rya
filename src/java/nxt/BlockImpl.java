@@ -58,6 +58,7 @@ final class BlockImpl implements Block {
     private volatile String stringId = null;
     private volatile long generatorId;
     private volatile byte[] bytes = null;
+    private volatile boolean needToPostProccess;
 
 
     BlockImpl(byte[] generatorPublicKey, byte[] generationSignature) {
@@ -289,6 +290,17 @@ final class BlockImpl implements Block {
         json.put("transactions", transactionsData);
         return json;
     }
+    @Override
+    public boolean needPostProccess()
+    {
+        return needToPostProccess;
+    }
+
+    @Override
+    public void SetNeedPostProccess(boolean need)
+    {
+        needToPostProccess = need;
+    }
 
     static BlockImpl parseBlock(JSONObject blockData) throws NxtException.NotValidException {
         try {
@@ -481,5 +493,6 @@ final class BlockImpl implements Block {
         }
         cumulativeDifficulty = previousBlock.cumulativeDifficulty.add(Convert.two64.divide(BigInteger.valueOf(baseTarget)));
     }
+
 
 }
