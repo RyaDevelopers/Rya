@@ -1,5 +1,5 @@
 #!/bin/sh
-CP="lib/*;classes"
+CP="lib/*:classes"
 SP=src/java/
 
 /bin/rm -rf html/doc/*

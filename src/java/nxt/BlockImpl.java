@@ -439,9 +439,9 @@ final class BlockImpl implements Block {
             Logger.logDebugMessage("Fee reduced by %f %s at height %d", ((double)totalBackFees)/Constants.ONE_NXT, Constants.COIN_SYMBOL, this.height);
         }
         Logger.logDebugMessage("apply: addToBalanceAndUnconfirmedBalanceNQT id = " + LedgerEvent.BLOCK_GENERATED, getId() + " totalInterestNQT = " + totalInterestNQT);
-        generatorAccount.addToBalanceAndUnconfirmedBalanceNQT(LedgerEvent.BLOCK_GENERATED, getId(), totalFeeNQT - totalBackFees + totalInterestNQT);
+        generatorAccount.addToBalanceAndUnconfirmedBalanceNQT(LedgerEvent.BLOCK_GENERATED, getId(), totalFeeNQT - totalBackFees);
         Logger.logDebugMessage("apply: addToForgedBalanceNQT totalInterestNQT = " + totalInterestNQT);
-        generatorAccount.addToForgedBalanceNQT(totalFeeNQT - totalBackFees, totalInterestNQT);
+        generatorAccount.addToForgedBalanceNQT(totalFeeNQT - totalBackFees, 0);
     }
 
     void setPrevious(BlockImpl block) {
