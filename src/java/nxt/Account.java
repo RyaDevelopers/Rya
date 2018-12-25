@@ -2034,15 +2034,10 @@ public final class Account {
             long trustUnconfirmedBalance = accountTrust == null ? 0 : accountTrust.unconfirmedUnits;
             trustUnconfirmedBalance = Math.addExact(trustUnconfirmedBalance, quantityUnconfirmed);
 
-
-            Logger.logDebugMessage("for id="+String.valueOf(this.id)+" with confirmed trust " + (trustBalance - quantityConfirmed) + " adding "+String.valueOf(quantityConfirmed)+
-                    " now "+String.valueOf(trustBalance) +  " and with unconfirmed trust of " + (trustUnconfirmedBalance - quantityUnconfirmed) + " adding to unconfirmed " +String.valueOf(quantityUnconfirmed)
-                    + " now " + String.valueOf(trustUnconfirmedBalance));
-
             if (accountTrust == null) {
                 accountTrust = new AccountTrust(this.id, trustBalance, trustUnconfirmedBalance);
 
-                Logger.logDebugMessage("for id="+String.valueOf(this.id)+" first rime in DB");
+                Logger.logDebugMessage("loading RYA for first time: loading  id="+String.valueOf(this.id));
 
             } else {
                 accountTrust.units = trustBalance;
