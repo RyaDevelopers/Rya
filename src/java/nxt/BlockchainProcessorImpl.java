@@ -1006,6 +1006,7 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
             for (DerivedDbTable table : derivedTables) {
                 blockchain.readLock();
                 try {
+                		Logger.logMessage("triming table  " + table.toString());
                     table.trim(lastTrimHeight);
                     Db.db.commitTransaction();
                 } finally {
@@ -1657,10 +1658,10 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
         Account curr;
         while (iter.hasNext()) {
 	        	curr = iter.next();
-	        	if (curr.getBalanceNQT() > 0) {
-	        		//Logger.logDebugMessage("adding trust for account id %d", curr.getId());
-	        		change_list.add(new TrustTransfer(trustFromCoins(SHARDING_FACTOR, curr.getBalanceNQT(), blockGoodInterest, totalCoinsNQT),
-	        				curr.getId(), blockchain.getHeight()));
+	        	if (curr.getBalanceNQT() > 0 && trustFromCoins(SHARDING_FACTOR, curr.getBalanceNQT(), blockGoodInterest, totalCoinsNQT) > 0) {
+        			//Logger.logDebugMessage("adding trust for account id %d", curr.getId());
+        			change_list.add(new TrustTransfer(trustFromCoins(SHARDING_FACTOR, curr.getBalanceNQT(), blockGoodInterest, totalCoinsNQT),
+        			curr.getId(), blockchain.getHeight()));
 	    		}
 	    	}
 	    	return change_list;
