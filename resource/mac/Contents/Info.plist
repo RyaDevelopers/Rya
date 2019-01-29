@@ -11,13 +11,13 @@
 	<key>CFBundleExecutable</key>
 	<string>nxt</string>
 	<key>CFBundleIconFile</key>
-	<string>nxt</string>
+	<string>rya</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.nxt.runtime</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Nxt</string>
+	<string>Rya</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,7 +29,7 @@
 	<key>CFBundleVersion</key>
 	<string>1.8.0</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright (C) 2016</string>
+	<string>Copyright (C) 2018</string>
 	<key>NSHighResolutionCapable</key>
 	<string>true</string>
 </dict>

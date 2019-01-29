@@ -4,7 +4,7 @@
         <property file="conf/nxt-default.properties" prefix="runtime"/>
     </properties>
     <info>
-        <appname>NXT</appname>
+        <appname>RYA</appname>
         <appversion>@{runtime.nxt.version}</appversion>
         <url>https://www.jelurida.com/</url>
         <run-privileged condition="izpack.windowsinstall"/>
@@ -84,18 +84,19 @@
     </locale>
 
     <resources>
-        <res id="InfoPanel.info" src="changelogs/nxt-client-@{runtime.nxt.version}.changelog.txt" parse="yes"/>
+        <res id="InfoPanel.info" src="changelogs/nxt-clone-client-@{runtime.nxt.version}.changelog.txt" parse="yes"/>
         <res id="LicencePanel.licence" src="LICENSE.txt"/>
-        <res id="Installer.image" src="html/www/img/installer_left_pane.png"/>
+        <res id="Installer.image" src="html/www/img/rya_installer_left_pane.png"/>
         <res id="shortcutSpec.xml" src="../installer/shortcutSpec.xml"/>
         <res id="Unix_shortcutSpec.xml" src="../installer/Unix_shortcutSpec.xml"/>
         <res id="RegistrySpec.xml" src="../installer/RegistrySpec.xml"/>
+        <res id="installer.langsel.img" src="html/www/img/trust_logo.png"/>
     </resources>
 
     <variables>
         <variable name="$InstallerFrame.logfilePath" value="default"/>
         <variable name="DesktopShortcutCheckboxEnabled" value="true"/>
-        <variable name="TargetPanel.dir.mac" value="/Applications/nxt.app"/>
+        <variable name="TargetPanel.dir.mac" value="/Applications/rya.app"/>
     </variables>
 
     <panels>
@@ -112,7 +113,7 @@
     <packs>
         <pack name="server" required="yes">
             <description>Common Server Files</description>
-            <file src="nxt.jar" targetdir="${INSTALL_PATH}" override="true"/>
+            <file src="rya.jar" targetdir="${INSTALL_PATH}" override="true"/>
             <file src="README.txt" targetdir="${INSTALL_PATH}" override="true"/>
             <file src="Wallet.url" targetdir="${INSTALL_PATH}" override="true"/>
             <file src="3RD-PARTY-LICENSES.txt" targetdir="${INSTALL_PATH}" override="true"/>
@@ -148,9 +149,9 @@
         <pack name="server.windows" os="windows" required="yes">
             <description>Windows Specific Resources</description>
             <os family="windows"/>
-            <file src="nxt.exe" targetdir="${INSTALL_PATH}" override="true"/>
-            <file src="nxtservice.exe" targetdir="${INSTALL_PATH}" override="true"/>
-            <file src="nxtservice.jar" targetdir="${INSTALL_PATH}" override="true"/>
+            <file src="rya.exe" targetdir="${INSTALL_PATH}" override="true"/>
+            <file src="ryaservice.exe" targetdir="${INSTALL_PATH}" override="true"/>
+            <file src="ryaservice.jar" targetdir="${INSTALL_PATH}" override="true"/>
             <file src="run.bat" targetdir="${INSTALL_PATH}" override="true"/>
             <file src="mint.bat" targetdir="${INSTALL_PATH}" override="true"/>
             <file src="compact.bat" targetdir="${INSTALL_PATH}" override="true"/>

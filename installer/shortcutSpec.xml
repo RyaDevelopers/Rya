@@ -1,13 +1,13 @@
 <shortcuts>
 	<skipIfNotSupported/>
 	<defaultCurrentUser/>
-	<programGroup defaultName="NXT" location="startMenu"/>
+	<programGroup defaultName="RYA" location="startMenu"/>
 	<shortcut
-		name="Nxt Server"
-		target="$INSTALL_PATH\nxt.exe"
+		name="Rya Server"
+		target="$INSTALL_PATH\rya.exe"
 		commandLine=""
 		workingDirectory="$INSTALL_PATH"
-        description="Start NXT server"
+        description="Start RYA server"
 		iconFile="$INSTALL_PATH\html\www\favicon.ico"
         iconIndex="0"
         initialState="normal"
