@@ -16,6 +16,7 @@
 
 package nxt.http;
 
+import nxt.Account;
 import nxt.AccountLedger;
 import nxt.Block;
 import nxt.BlockchainProcessor;
@@ -72,6 +73,8 @@ public final class GetBlockchainStatus extends APIServlet.APIRequestHandler {
         response.put("isLightClient", Constants.isLightClient);
         response.put("maxAPIRecords", API.maxRecords);
         response.put("blockchainState", Peers.getMyBlockchainState());
+        response.put("totalSupply", Account.getTotalBalanceNQT());
+        response.put("totalTrust", Account.getTotalTrust());
         return response;
     }
 

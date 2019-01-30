@@ -2372,6 +2372,21 @@ public final class Account {
         return total;
     }
 
+    public static long getTotalTrust() {
+        long total = 0;
+        try (Connection con = Db.db.getConnection()){
+        		PreparedStatement pstmtSelect = con.prepareStatement("SELECT sum(UNITS) total FROM account_trust where latest=TRUE and UNITS > 0");
+        		try (ResultSet rs = pstmtSelect.executeQuery()) {
+        			if (rs.next()) {
+        				total = (rs.getLong("total"));
+                }
+            } 
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e.toString(), e);
+    		}
+    		return total;
+    }
 
     void payDividends(final long transactionId, Attachment.ColoredCoinsDividendPayment attachment) {
         long totalDividend = 0;
