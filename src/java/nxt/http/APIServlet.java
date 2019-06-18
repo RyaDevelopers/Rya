@@ -91,8 +91,13 @@ public final class APIServlet extends HttpServlet {
 
         protected abstract JSONStreamAware processRequest(HttpServletRequest request) throws NxtException;
 
+
         protected JSONStreamAware processRequest(HttpServletRequest request, HttpServletResponse response) throws NxtException {
             return processRequest(request);
+        }
+
+        protected String processRequestString(HttpServletRequest request) throws NxtException {
+            return "not implemented";
         }
 
         protected boolean requirePost() {
@@ -100,6 +105,10 @@ public final class APIServlet extends HttpServlet {
         }
 
         protected boolean startDbTransaction() {
+            return false;
+        }
+
+        protected boolean isPlainText() {
             return false;
         }
 
@@ -192,6 +201,8 @@ public final class APIServlet extends HttpServlet {
         resp.setDateHeader("Expires", 0);
         resp.setContentType("text/plain; charset=UTF-8");
 
+        String strRes = "not init";
+        Boolean plainText = false;
         JSONStreamAware response = JSON.emptyJSON;
         long startTime = System.currentTimeMillis();
 
@@ -251,9 +262,14 @@ public final class APIServlet extends HttpServlet {
                         response = REQUIRED_LAST_BLOCK_NOT_FOUND;
                         return;
                     }
-                    response = apiRequestHandler.processRequest(req, resp);
-                    if (requireLastBlockId == 0 && requireBlockId != 0 && response instanceof JSONObject) {
-                        ((JSONObject) response).put("lastBlock", Nxt.getBlockchain().getLastBlock().getStringId());
+                    if (!apiRequestHandler.isPlainText()) {
+                        response = apiRequestHandler.processRequest(req, resp);
+                        if (requireLastBlockId == 0 && requireBlockId != 0 && response instanceof JSONObject) {
+                            ((JSONObject) response).put("lastBlock", Nxt.getBlockchain().getLastBlock().getStringId());
+                        }
+                    } else {
+                        plainText = true;
+                        strRes = apiRequestHandler.processRequestString(req);
                     }
                 } finally {
                     if (apiRequestHandler.startDbTransaction()) {
@@ -280,12 +296,18 @@ public final class APIServlet extends HttpServlet {
             response = ERROR_INCORRECT_REQUEST;
         } finally {
             // The response will be null if we created an asynchronous context
-            if (response != null) {
-                if (response instanceof JSONObject) {
-                    ((JSONObject) response).put("requestProcessingTime", System.currentTimeMillis() - startTime);
+            if (!plainText) {
+                if (response != null) {
+                    if (response instanceof JSONObject) {
+                        ((JSONObject) response).put("requestProcessingTime", System.currentTimeMillis() - startTime);
+                    }
+                    try (Writer writer = resp.getWriter()) {
+                        JSON.writeJSONString(response, writer);
+                    }
                 }
+            } else {
                 try (Writer writer = resp.getWriter()) {
-                    JSON.writeJSONString(response, writer);
+                    writer.write(strRes);
                 }
             }
         }
